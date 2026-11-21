@@ -17,7 +17,7 @@ import { useOpenAlerts } from '@/lib/useOpenAlerts';
  *   - the site and the business date are labels -- they wore dropdown arrows
  *     for menus that did not exist, and the date was fixed at 16/09/2026.
  */
-export default function Topbar() {
+export default function Topbar({ onMenu }: { onMenu?: () => void } = {}) {
   const router = useRouter();
   const { isSiteManager, assignedSite } = useAuth();
   const visible = useVisibleNav();
@@ -56,7 +56,7 @@ export default function Topbar() {
 
   return (
     <header
-      className="flex items-center gap-3 px-6 lg:px-8 shrink-0"
+      className="flex items-center gap-3 px-4 sm:px-6 lg:px-8 shrink-0"
       style={{
         height: 64,
         background: 'rgba(8,13,24,0.9)',
@@ -66,6 +66,18 @@ export default function Topbar() {
         boxShadow: '0 1px 20px rgba(0,0,0,0.3)',
       }}
     >
+      {/* The menu, below laptop width (the sidebar is a drawer there). */}
+      <button
+        type="button"
+        onClick={onMenu}
+        aria-label="Open the menu"
+        className="lg:hidden -ml-1 p-2 rounded-lg hover:bg-white/[0.06]"
+        style={{ color: 'var(--foreground)' }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
       {/* Go to a screen */}
       <div className="flex-1 max-w-sm relative">
         {searchOpen ? (

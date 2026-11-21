@@ -15,6 +15,7 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
   // any address got the whole shell with an error in every panel. (W4)
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     if (!getToken()) router.replace('/sign-up-login-screen');
     else setReady(true);
@@ -23,16 +24,20 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
-      <Sidebar currentPath={currentPath} />
+      <Sidebar currentPath={currentPath} mobileOpen={menuOpen} onNavigate={() => setMenuOpen(false)} />
+      {menuOpen && (
+        <div className="lg:hidden fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.55)' }}
+             onClick={() => setMenuOpen(false)} aria-hidden="true" />
+      )}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Topbar />
+        <Topbar onMenu={() => setMenuOpen(true)} />
         <main
           className="flex-1 overflow-y-auto scrollbar-thin"
           style={{
             background: 'radial-gradient(ellipse at 20% 0%, rgba(0,212,160,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(96,165,250,0.03) 0%, transparent 60%), var(--background)',
           }}
         >
-          <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-7 max-w-screen-2xl mx-auto">
+          <div className="px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-5 sm:py-7 max-w-screen-2xl mx-auto">
             {children}
           </div>
         </main>

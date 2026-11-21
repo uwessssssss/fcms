@@ -61,6 +61,10 @@ const groups = ['Monitor', 'Inventory', 'Pumps', 'Operations', 'Depot', 'Reports
 
 interface SidebarProps {
   currentPath?: string;
+  /** Below laptop width the sidebar is a drawer: open or not. */
+  mobileOpen?: boolean;
+  /** Called when a screen is chosen, so the drawer can close. */
+  onNavigate?: () => void;
 }
 
 
@@ -84,7 +88,7 @@ export function useVisibleNav(): NavItem[] {
   });
 }
 
-export default function Sidebar({ currentPath = '/' }: SidebarProps) {
+export default function Sidebar({ currentPath = '/', mobileOpen = false, onNavigate }: SidebarProps) {
   // The page we are on, read from the address -- not from a prop each page had
   // to remember to pass. Most pages added later passed nothing, so the sidebar
   // fell back to '/' and lit the Dashboard whatever page was open.
@@ -120,14 +124,19 @@ export default function Sidebar({ currentPath = '/' }: SidebarProps) {
   const displayName = user?.name ?? 'Not signed in';
   const displayEmail = user?.email ?? '';
   const displayInitials = user?.initials ?? '--';
-  const displayRoleLabel = user?.roleLabel ?? 'Head Office';
+  // Template text said 'Head Office' and 'All 5 sites visible' to nobody.
+  const displayRoleLabel = user?.roleLabel ?? 'Signed out';
   const displayScope = user?.assignedSite
     ? `${user.assignedSite} only`
-    : (user?.scopeDetail ?? 'All 5 sites visible');
+    : (user?.scopeDetail ?? '');
 
   return (
+    // Below lg (1024px) a drawer over the page, opened from the top bar; it
+    // was a fixed 248px column that left a phone 142px for the screen itself.
     <aside
-      className="flex flex-col shrink-0 transition-all duration-300 ease-in-out"
+      className={`flex flex-col shrink-0 transition-all duration-300 ease-in-out fixed inset-y-0 left-0 z-50 lg:static lg:z-auto lg:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
       style={{
         width: collapsed ? 68 : 248,
         background: 'linear-gradient(180deg, #0A1220 0%, #080D18 100%)',
@@ -214,6 +223,7 @@ export default function Sidebar({ currentPath = '/' }: SidebarProps) {
                   <Link
                     key={item.key}
                     href={item.href}
+                    onClick={onNavigate}
                     title={collapsed ? item.label : undefined}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative mb-0.5 ${
                       isActive ? '' : 'hover:bg-white/[0.04]'
