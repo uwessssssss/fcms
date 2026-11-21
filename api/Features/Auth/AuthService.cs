@@ -238,6 +238,7 @@ public static class AuthEndpoints
             Results.Ok(await svc.LoginAsync(req,
                 ctx.Connection.RemoteIpAddress?.ToString(),
                 ctx.Request.Headers.UserAgent.ToString(), ct)))
+         .AllowAnonymous()          // the one way in without a token (fallback policy, A2)
          .RequireRateLimiting("login");
 
         g.MapPost("/change-password", async (ChangePasswordRequest req, AuthService svc,

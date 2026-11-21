@@ -307,7 +307,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             NameClaimType = "name"
         };
     });
-builder.Services.AddAuthorization();
+// Every endpoint needs a signed-in user unless it says otherwise (sign-in and
+// /health do). Without this, a new endpoint that forgot RequireAuthorization()
+// was open to anyone. (Audit Nov 2026, A2.)
+builder.Services.AddAuthorization(o => o.FallbackPolicy =
+    new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 // Login is the one endpoint an attacker can call without credentials, so it is
 // the one that needs a limit. v1 had failed_logins and locked_until columns and
@@ -564,7 +568,7 @@ await using (var probe = app.Services.GetRequiredService<NpgsqlDataSource>()
     }
 }
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapAuth();
 app.MapShifts();
 app.MapShiftActivity();
