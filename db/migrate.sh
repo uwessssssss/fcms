@@ -101,6 +101,7 @@ MIGRATIONS=(
   620_books_reports.sql          # trial balance, ledgers, receivables, controls, period close
   630_bank_reconciliation.sql    # bank and mobile money: accounts, transfers, statements, matching
   640_year_end.sql               # closing a year into retained earnings
+  650_security_hardening.sql     # audit Nov 2026: tenant and actor checks in the books, append-only records
 )
 
 ensure_ledger() {

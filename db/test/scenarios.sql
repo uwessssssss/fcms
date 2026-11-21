@@ -322,11 +322,14 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege OR check_violation THEN NULL; END;
 
   -- A manual journal: not by a supervisor; not unbalanced; by a manager, yes.
+  -- (650) each actor is the signed-in user, so each signs in first.
+  PERFORM set_config('app.staff_id', c_sup::text, true);
   BEGIN
     PERFORM fn_gl_manual_journal(NULL, current_date, 'Bank charges for October',
       '[{"code":"6100","amount":15000},{"code":"1010","amount":-15000}]', c_sup);
     RAISE EXCEPTION 'SCENARIO: a supervisor posted a manual journal';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  PERFORM set_config('app.staff_id', c_mgr::text, true);
   BEGIN
     PERFORM fn_gl_manual_journal(NULL, current_date, 'Bank charges for October',
       '[{"code":"6100","amount":15000},{"code":"1010","amount":-14000}]', c_mgr);
@@ -337,21 +340,30 @@ BEGIN
   v_j := fn_gl_manual_journal(NULL, current_date, 'Bank charges for October',
     '[{"code":"6100","amount":15000},{"code":"1010","amount":-15000}]', c_mgr);
 
-  -- A reversal mirrors it line for line; a second is refused.
-  v_r := fn_gl_reverse(v_j, 'posted to the wrong month', c_mgr);
+  -- A reversal: not a manager's (accountant or head office, as the API says);
+  -- it mirrors the journal line for line; a second is refused.
+  BEGIN
+    PERFORM fn_gl_reverse(v_j, 'posted to the wrong month', c_mgr);
+    RAISE EXCEPTION 'SCENARIO: a manager reversed a journal';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  PERFORM set_config('app.staff_id', '10000000-0000-4000-8000-000000000004', true);
+  v_r := fn_gl_reverse(v_j, 'posted to the wrong month', '10000000-0000-4000-8000-000000000004');
   IF (SELECT SUM(l.amount) FROM gl_line l WHERE l.journal_id IN (v_j, v_r) AND l.account_id = v_acct) <> 0 THEN
     RAISE EXCEPTION 'SCENARIO: the reversal did not undo the bank line';
   END IF;
   BEGIN
-    PERFORM fn_gl_reverse(v_j, 'again', c_mgr);
+    PERFORM fn_gl_reverse(v_j, 'again', '10000000-0000-4000-8000-000000000004');
     RAISE EXCEPTION 'SCENARIO: a journal was reversed twice';
   EXCEPTION WHEN check_violation THEN NULL; END;
 
   -- Closing a month: not a supervisor's, and not with a shift still open.
+  PERFORM set_config('app.staff_id', c_sup::text, true);
   BEGIN
     PERFORM fn_gl_close_period(current_date, c_sup);
     RAISE EXCEPTION 'SCENARIO: a supervisor closed a month';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  -- (650) the books act only as the signed-in user: sign in as the accountant.
+  PERFORM set_config('app.staff_id', '10000000-0000-4000-8000-000000000004', true);
   BEGIN
     PERFORM fn_gl_close_period(current_date, '10000000-0000-4000-8000-000000000004');
     RAISE EXCEPTION 'SCENARIO: a month closed with a shift still open';
