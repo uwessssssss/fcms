@@ -93,6 +93,7 @@ public sealed class MoneyAccountService
                    COALESCE((SELECT SUM(amount) FROM fn_money_account_book(ma.id)), 0) AS BookBalance,
                    (SELECT max(period_to) FROM bank_statement s WHERE s.money_account_id = ma.id) AS LastStatement
               FROM money_account ma LEFT JOIN payment_channel pc ON pc.id = ma.channel_id
+             WHERE fn_money_scope_ok(ma.id)   -- (660) a station sees its own accounts; head office all
              ORDER BY ma.kind, ma.name
             """, transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
@@ -219,6 +220,11 @@ public sealed class MoneyAccountService
     {
         Require("report.view");
         var conn = await _uow.ConnectionAsync(ct);
+        // (660) another station's or the company's account reads as unknown here.
+        if (!await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
+                "SELECT fn_money_scope_ok(@account) AND EXISTS (SELECT 1 FROM money_account WHERE id = @account)",
+                new { account = accountId }, transaction: _uow.Transaction, cancellationToken: ct)))
+            throw new DomainException("UNKNOWN_ACCOUNT", "No such bank or mobile-money account.", 404);
         var day = asOf.ToDateTime(TimeOnly.MinValue);
         var summary = await conn.QuerySingleAsync<BankRecSummary>(new CommandDefinition(
             """

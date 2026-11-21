@@ -58,6 +58,7 @@ copies it -- never an older copy.
 | `fn_business_date` | function | `040_shift.sql` | 1 |
 | `fn_check_credit_headroom` | function | `210_credit_limit_race.sql` | 1 |
 | `fn_close_variance` | function | `430_close_variance_is_a_change.sql` | 1 |
+| `fn_company_scope_ok` | function | `660_money_scope.sql` | 1 |
 | `fn_current_price` | function | `042_pricing.sql` | 1 |
 | `fn_customer_price` | function | `600_customer_price.sql` | 1 |
 | `fn_dip_litres` | function | `190_dips_in_litres.sql` | 1 |
@@ -91,6 +92,7 @@ copies it -- never an older copy.
 | `fn_meter_delta` | function | `050_fuel_ledger.sql` | 1 |
 | `fn_money_account_book` | function | `630_bank_reconciliation.sql` | 1 |
 | `fn_money_account_line` | function | `630_bank_reconciliation.sql` | 1 |
+| `fn_money_scope_ok` | function | `660_money_scope.sql` | 1 |
 | `fn_note_admin_action` | function | `160_system_admin.sql` | 1 |
 | `fn_nozzle_holder` | function | `520_credit_sale_attendant.sql` | 1 |
 | `fn_open_shift` | function | `070_operations.sql` | 1 |
@@ -133,6 +135,7 @@ copies it -- never an older copy.
 | `trg_head_office_does_not_trade` | function | `240_org_rules.sql` | 1 |
 | `trg_manager_covers_supervisor` | function | `200_supervisor_manager.sql` | 1 |
 | `trg_meter_event_classified` | function | `050_fuel_ledger.sql` | 1 |
+| `trg_money_scope` | function | `660_money_scope.sql` | 1 |
 | `trg_nozzle_site_matches` | function | `010_foundation.sql` | 1 |
 | `trg_nozzle_wiring_frozen` | function | `340_equipment_wiring_frozen.sql` | 1 |
 | `trg_product_unit_frozen` | function | `280_controls_closed.sql` | 1 |

@@ -45,6 +45,9 @@ DECLARE
   a_acc     uuid := '10000000-0000-4000-8000-000000000004';   -- A's accountant
   a_ho      uuid := '10000000-0000-4000-8000-0000000000a1';   -- A's head office
   a_sup     uuid := '10000000-0000-4000-8000-000000000002';   -- A's supervisor
+  a_mgr     uuid := '10000000-0000-4000-8000-000000000001';   -- A's station manager
+  a_bank    uuid := '0a000000-0000-4000-8000-0000000000b1';   -- a company account (no site)
+  a_bank2   uuid := '0a000000-0000-4000-8000-0000000000b4';
   b_tenant  uuid := '0c000000-0000-4000-8000-000000000001';
   b_acc     uuid := '0c000000-0000-4000-8000-0000000000a4';
   a_journal uuid;
@@ -94,6 +97,19 @@ BEGIN
        format('UPDATE bank_statement_line SET amount = amount - 1 WHERE id = %L', a_line)),
     ('S6e a recorded money transfer is rewritten', a_tenant, a_ho,
        'UPDATE money_transfer SET amount = amount + 1 WHERE true'),
+    -- S7 (A1): a station manager and the company's bank accounts (660)
+    ('S7 a station manager sees a company bank account', a_tenant, a_mgr,
+       format('SELECT 1 / (CASE WHEN fn_money_scope_ok(%L) THEN 1 ELSE 0 END)', a_bank)),
+    ('S7b a station manager moves money between company accounts', a_tenant, a_mgr,
+       format('INSERT INTO money_transfer (tenant_id, from_account, to_account, amount, recorded_by) VALUES (%L, %L, %L, 5000000, %L)',
+              a_tenant, a_bank, a_bank2, a_mgr)),
+    ('S7c a station manager imports a line into the company bank statement', a_tenant, a_mgr,
+       format('INSERT INTO bank_statement_line (tenant_id, statement_id, money_account_id, txn_date, amount, line_no) VALUES (%L, %L, %L, current_date, 1000, 99)',
+              a_tenant, '0a000000-0000-4000-8000-0000000000b2', a_bank)),
+    ('S7d a station manager opens a company-level account', a_tenant, a_mgr,
+       format('INSERT INTO money_account (tenant_id, kind, name, institution) VALUES (%L, ''BANK'', ''x'', ''x'')', a_tenant)),
+    ('S7e a station manager matches the company bank statement', a_tenant, a_mgr,
+       format('INSERT INTO bank_match (tenant_id, money_account_id, kind, matched_by) VALUES (%L, %L, ''MANUAL'', %L)', a_tenant, a_bank, a_mgr)),
     ('S6c the audit log is rewritten', a_tenant, a_ho,
        'UPDATE audit_log SET action = ''rewritten'' WHERE action = ''probe'''),
     ('S6d an account''s type is changed after it has postings', a_tenant, a_acc,
@@ -130,6 +146,16 @@ BEGIN
       END IF;
     END;
   END LOOP;
+  -- Not over-blocked: head office still moves money between company accounts.
+  PERFORM set_config('app.tenant_id', a_tenant::text, true);
+  PERFORM set_config('app.staff_id', a_ho::text, true);
+  SET LOCAL ROLE fcms_app;
+  INSERT INTO money_transfer (tenant_id, from_account, to_account, amount, recorded_by)
+  VALUES (a_tenant, a_bank, a_bank2, 1000, a_ho);
+  IF NOT fn_money_scope_ok(a_bank) THEN RAISE EXCEPTION 'SECURITY: head office cannot see the company bank'; END IF;
+  RESET ROLE;
+  RAISE NOTICE 'allowed head office keeps the company accounts';
+
   IF array_length(bad, 1) > 0 THEN
     RAISE EXCEPTION 'SECURITY: % attack(s) succeeded: %', array_length(bad, 1), array_to_string(bad, '; ');
   END IF;

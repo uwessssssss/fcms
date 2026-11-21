@@ -102,6 +102,7 @@ MIGRATIONS=(
   630_bank_reconciliation.sql    # bank and mobile money: accounts, transfers, statements, matching
   640_year_end.sql               # closing a year into retained earnings
   650_security_hardening.sql     # audit Nov 2026: tenant and actor checks in the books, append-only records
+  660_money_scope.sql            # audit Nov 2026: bank and wallet accounts keep to their station
 )
 
 ensure_ledger() {
