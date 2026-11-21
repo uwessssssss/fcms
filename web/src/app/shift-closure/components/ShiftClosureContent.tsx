@@ -947,10 +947,12 @@ export default function ShiftClosureContent() {
         <div className="flex gap-1 p-1 rounded-xl overflow-x-auto no-print" style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}>
           {tabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className="flex items-center gap-2 flex-1 justify-center px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap"
+              className="flex items-center gap-2 flex-none sm:flex-1 justify-center px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap"
               style={{ backgroundColor: activeTab === tab.key ? 'var(--card)' : 'transparent', color: activeTab === tab.key ? 'var(--primary)' : 'var(--muted-foreground)', boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
               <Icon name={tab.icon as Parameters<typeof Icon>[0]['name']} size={13} />
-              <span className="hidden sm:inline">{tab.label}</span>
+              {/* Labelled on phones too: six unlabelled icons were a guess. The
+                  bar scrolls sideways instead. (D3) */}
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>

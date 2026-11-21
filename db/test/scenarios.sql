@@ -304,9 +304,12 @@ BEGIN
     RAISE EXCEPTION 'SCENARIO: a closed shift never reached the books';
   END IF;
   IF (SELECT SUM(amount) FROM gl_line) <> 0 THEN RAISE EXCEPTION 'SCENARIO: the books do not balance'; END IF;
-  IF EXISTS (SELECT 1 FROM fn_gl_controls_checked(current_date) WHERE ok = FALSE) THEN
+  -- As of the business day in Kampala, as the API asks (BooksService.Today,
+  -- UTC+3). current_date on a UTC server is still yesterday from midnight to
+  -- 03:00 in Kampala, so this failed for three hours every night. (T2)
+  IF EXISTS (SELECT 1 FROM fn_gl_controls_checked((now() AT TIME ZONE 'Africa/Kampala')::date) WHERE ok = FALSE) THEN
     RAISE EXCEPTION 'SCENARIO: controls differ: %', (SELECT string_agg(control || ' ' || detail, '; ')
-                                                      FROM fn_gl_controls_checked(current_date) WHERE ok = FALSE);
+                                                      FROM fn_gl_controls_checked((now() AT TIME ZONE 'Africa/Kampala')::date) WHERE ok = FALSE);
   END IF;
 
   -- The app cannot write the books itself...

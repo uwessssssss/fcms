@@ -59,11 +59,11 @@ BEGIN
   -- The bank control is left to the simulator's own check: it plants a
   -- short-credited deposit and an unrecorded standing order, so the bank must
   -- differ -- by exactly those (simulate.py, reconcile_money).
-  SELECT count(*) INTO n FROM fn_gl_controls_checked(current_date) WHERE ok = FALSE AND control <> 'Bank (1010)';
+  SELECT count(*) INTO n FROM fn_gl_controls_checked((now() AT TIME ZONE 'Africa/Kampala')::date) WHERE ok = FALSE AND control <> 'Bank (1010)';
   IF n > 0 THEN
     RAISE EXCEPTION 'SIM: % control(s) do not agree with their records: %', n,
       (SELECT string_agg(control || ' ' || detail || ' off by ' || difference, '; ')
-         FROM fn_gl_controls_checked(current_date) WHERE ok = FALSE AND control <> 'Bank (1010)');
+         FROM fn_gl_controls_checked((now() AT TIME ZONE 'Africa/Kampala')::date) WHERE ok = FALSE AND control <> 'Bank (1010)');
   END IF;
   -- Every month's journals balance on their own, and every journal does.
   SELECT count(*) INTO n FROM (SELECT journal_id FROM gl_line GROUP BY 1 HAVING SUM(amount) <> 0) x;
@@ -126,7 +126,7 @@ SELECT cc.code, cc.name, h.balance, cc.credit_limit
 \echo '== the books'
 SELECT control, detail, ledger, record, difference, unit,
        CASE ok WHEN TRUE THEN 'agrees' WHEN FALSE THEN 'DIFFERS' ELSE 'for information' END AS status
-  FROM fn_gl_controls_checked(current_date);
+  FROM fn_gl_controls_checked((now() AT TIME ZONE 'Africa/Kampala')::date);
 
 SELECT code, name, to_char(closing, 'FM999,999,999,990.00') AS balance
   FROM fn_gl_trial_balance(date '2000-01-01', current_date);

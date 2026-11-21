@@ -209,6 +209,9 @@ async function browserChecks(browser) {
       if (user === 'HO01' && TABS[route]) for (const tab of TABS[route]) await visit(page, log, user, route, tab);
     }
     // Sign out
+    // On a phone, Sign out is in the drawer: open the menu first.
+    const menu = page.getByLabel('Open the menu');
+    if (await menu.isVisible().catch(() => false)) { await menu.click(); await page.waitForTimeout(400); }
     const out = page.getByText('Sign out', { exact: true }).first();
     if (await out.count()) {
       await out.click();

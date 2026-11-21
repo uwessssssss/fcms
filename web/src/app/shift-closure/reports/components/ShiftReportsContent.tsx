@@ -245,12 +245,13 @@ export default function ShiftReportsContent() {
 
       {/* Filters + Tabs */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}>
+        {/* Labelled at every width; scrolls sideways on a phone. (D3) */}
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto max-w-full" style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}>
           {reportTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveReport(tab.key)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex-none"
               style={{
                 backgroundColor: activeReport === tab.key ? 'var(--card)' : 'transparent',
                 color: activeReport === tab.key ? 'var(--primary)' : 'var(--muted-foreground)',
@@ -258,7 +259,7 @@ export default function ShiftReportsContent() {
               }}
             >
               <Icon name={tab.icon as Parameters<typeof Icon>[0]['name']} size={13} />
-              <span className="hidden md:inline">{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
