@@ -710,14 +710,27 @@ def detected(sim: Sim) -> None:
     rows = sim.db.run(MGR[0], f"""
 SELECT 'losses',    count(*) FROM exception_flag WHERE code = 'STOCK_VARIANCE' AND level = 'CRITICAL' AND shift_id IS NOT NULL
 UNION ALL SELECT 'noise', count(*) FROM exception_flag WHERE code = 'STOCK_VARIANCE' AND level = 'WARN'
+UNION ALL SELECT 'noise_max', COALESCE(round(max(abs((detail->>'variance_litres')::numeric))), 0)
+            FROM exception_flag WHERE code = 'STOCK_VARIANCE' AND level = 'WARN'
 UNION ALL SELECT 'shortages', count(*) FROM staff_shortage
 UNION ALL SELECT 'over_cap',  count(*) FROM exception_flag WHERE code = 'CASH_HELD_OVER_CAP';""")
     got = {r[0]: int(r[1]) for r in rows}
     problems = []
     if got["losses"] != sim.stats["losses"]:
         problems.append(f"{sim.stats['losses']} fuel losses planted, {got['losses']} CRITICAL variances raised")
-    if got["noise"]:
-        problems.append(f"{got['noise']} stock warnings raised on dip noise alone")
+    # Dip noise alone (sigma 2.5 L at the open dip, 2.0 L at the close, so about
+    # 3.2 L on a shift's variance) crosses the 10 L warning floor at about 3.1
+    # sigma: roughly once in a few hundred tank-shifts. A WARN now and then is
+    # what a real dipstick gives too. What noise cannot do is make many, or a
+    # large one -- that is the book stock being wrong. (Audit Nov 2026: the old
+    # "none at all" made the result depend on the seed: 1234 raised one at 10.5 L.)
+    noise_allowed = 1 + sim.days // 30
+    noise_ceiling = 10 + 4 * 3.2
+    if got["noise"] > noise_allowed:
+        problems.append(f"{got['noise']} stock warnings on dip noise alone; noise explains at most {noise_allowed}")
+    if got["noise_max"] > noise_ceiling:
+        problems.append(f"a stock warning of {got['noise_max']} L with no loss planted; "
+                        f"dip noise does not reach {noise_ceiling:.0f} L -- the book stock is wrong")
     if got["shortages"] != sim.stats["shortages"]:
         problems.append(f"{sim.stats['shortages']} cash shortages planted, {got['shortages']} raised")
     if got["over_cap"] > sim.stats["over_cap"]:

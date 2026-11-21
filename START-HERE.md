@@ -86,6 +86,7 @@ psql -d fcms -f seed/one_station.sql
 psql -d fcms -f seed/depot.sql
 psql -d fcms -f seed/demo_day.sql
 psql -d fcms -f test/scenarios.sql        # optional: ALL SCENARIOS PASS (it rolls back)
+psql -d fcms -f test/security.sql         # optional: ALL 19 ATTACKS BLOCKED (it rolls back)
 cd ..
 ```
 

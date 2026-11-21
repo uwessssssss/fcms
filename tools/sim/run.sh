@@ -64,7 +64,7 @@ psql -X -q -v ON_ERROR_STOP=1 -d fcms_sim -f "$REPO/db/seed/one_station.sql" >/d
 psql -X -q -v ON_ERROR_STOP=1 -d fcms_sim -f "$REPO/db/seed/depot.sql" >/dev/null
 
 echo "== trading $DAYS days"
-python3 "$HERE/simulate.py" --days "$DAYS" --db fcms_sim --port "$PORT"
+python3 "$HERE/simulate.py" --days "$DAYS" --db fcms_sim --port "$PORT" --seed "${SIM_SEED:-2026}"
 
 echo "== checking the books"
 python3 - "$SIMCLOCK_FILE" <<'PY'

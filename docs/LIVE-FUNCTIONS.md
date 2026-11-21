@@ -14,6 +14,7 @@ copies it -- never an older copy.
 | `trg_gl_post` | function | `650_security_hardening.sql` | 3 |
 | `v_daily_stock_loss` | view | `420_daily_loss_is_a_change.sql` | 3 |
 | `v_site_performance` | view | `380_moving_average_cost.sql` | 3 |
+| `fn_bank_auto_match` | function | `670_wallet_match_order.sql` | 2 |
 | `fn_bank_post_statement_line` | function | `650_security_hardening.sql` | 2 |
 | `fn_capture_shift_prices` | function | `560_due_price_applies_at_open.sql` | 2 |
 | `fn_customer_headroom` | function | `450_paid_ahead.sql` | 2 |
@@ -49,7 +50,6 @@ copies it -- never an older copy.
 | `fn_auth_diagnose` | function | `310_auth_diagnosis.sql` | 1 |
 | `fn_auth_lookup` | function | `020_people.sql` | 1 |
 | `fn_auth_record_attempt` | function | `020_people.sql` | 1 |
-| `fn_bank_auto_match` | function | `630_bank_reconciliation.sql` | 1 |
 | `fn_bank_match` | function | `630_bank_reconciliation.sql` | 1 |
 | `fn_bank_reconciliation` | function | `630_bank_reconciliation.sql` | 1 |
 | `fn_bank_unmatch` | function | `630_bank_reconciliation.sql` | 1 |

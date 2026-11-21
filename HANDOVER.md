@@ -10,7 +10,7 @@ distrust. The last of those is the most useful section.
 
 | | |
 |---|---|
-| Database | PostgreSQL 16, **65 migrations**, **101 integrity tests** |
+| Database | PostgreSQL 16, **68 migrations**, **101 integrity tests**, **19 attacks that must fail** (db/test/security.sql) |
 | API | .NET 8 + Dapper, **111 endpoints**, **22 statements** |
 | Web | Next.js, **21 screens**, dark operations console |
 | Checks | **12 static checkers** plus a TypeScript compile, one command |
@@ -206,4 +206,5 @@ is a one-line change in 460 - the decision is yours.
 | **The books**: a double-entry ledger posted by the operations themselves, in the same transaction; balanced, never edited (reversed instead), written only by its own functions. A shift posts when declared. Stock at moving average from the ledger, brought to the dip at every close. Every rule is in `docs/BOOKS.md` | 610, 620, `BooksService.cs`, `/books` | — |
 | **Bank and mobile money against their statements**: CSV import (deduplicated), automatic matching (bank 1:1 within 5 days; MoMo by shift window, then by day), manual match only when both sides sum equal, charges posted from the statement line. Reconciled = nothing unmatched on the statement and no book item older than 5 days. MoMo withdrawals recorded as transfers, fee to 6100 | 630, `MoneyAccountService.cs`, Books → Bank & mobile money | — |
 | **Year end**: refused until the year's months are closed; one 31 December journal empties income and expense into 3100 per site; closes once. The P&L reads trading entries only so a closed year still shows its profit | 640, `BooksService.cs` | — |
+| **Security audit, Nov 2026** (docs/AUDIT-2026-11.md): the ledger's definer functions check company and role themselves; the actor is always the signed-in user; journals cannot name another company's records; the app cannot call the posting machinery; statements and transfers are append-only; company bank accounts belong to head office, station accounts to their station; wallets reconcile by shift window before amount | 650, 660, 670, `db/test/security.sql` | — |
 | Type errors do not stop a production build of the web app (`ignoreBuildErrors`) | `web/next.config.mjs` | turn it off once `npx tsc --noEmit` is clean on your machine |

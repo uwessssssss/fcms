@@ -103,6 +103,7 @@ MIGRATIONS=(
   640_year_end.sql               # closing a year into retained earnings
   650_security_hardening.sql     # audit Nov 2026: tenant and actor checks in the books, append-only records
   660_money_scope.sql            # audit Nov 2026: bank and wallet accounts keep to their station
+  670_wallet_match_order.sql     # audit Nov 2026: wallets matched by shift window before amount
 )
 
 ensure_ledger() {

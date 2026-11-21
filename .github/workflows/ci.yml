@@ -1,0 +1,98 @@
+# FCMS v2 -- every check, on every push and pull request.
+#
+#   database  fresh migrate + 101 tests, seeds, business scenarios, the attacks
+#             that must fail (security.sql), every API statement prepares,
+#             and 14 simulated trading days with every control checked
+#   static    the 18 static checks (verify.sh)
+#   web       install, type check, the runtime checks, production build
+#   api       dotnet build with warnings as errors
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5544:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: "5544"
+      PGUSER: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrate a fresh database and run the 101 tests
+        run: |
+          createdb fcms_check
+          cd db && PGDATABASE=fcms_check ./migrate.sh test | tee /tmp/migrate.log
+          grep -E "^\s+[0-9]+ \|\s+0 \|" /tmp/migrate.log
+      - name: Every API statement prepares; every query fills its class
+        run: |
+          python3 tools/dbrun/prepare_all.py fcms_check
+          python3 tools/dbrun/columns.py fcms_check
+      - name: Demo data and business scenarios
+        run: |
+          cd db
+          for f in one_station depot demo_day; do psql -d fcms_check -v ON_ERROR_STOP=1 -q -f seed/$f.sql >/dev/null; done
+          psql -d fcms_check -X -v ON_ERROR_STOP=1 -f test/scenarios.sql
+      - name: Attacks that must fail (security)
+        run: psql -d fcms_check -X -v ON_ERROR_STOP=1 -f db/test/security.sql
+      - name: 14 simulated trading days, every control checked
+        env:
+          SIM_NO_DUMP: "1"
+        run: |
+          sudo apt-get install -y -q gcc >/dev/null
+          bash tools/sim/run.sh 14
+
+  static:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: The 18 static checks
+        run: ./verify.sh
+
+  web:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Runtime checks (calls, blank numbers, buttons)
+        working-directory: tools/runtime
+        env:
+          NODE_PATH: ${{ github.workspace }}/web/node_modules
+        run: bash run.sh
+      - name: Production build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5000
+        run: npm run build
+
+  api:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build, warnings as errors
+        run: dotnet build api -warnaserror
