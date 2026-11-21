@@ -1,6 +1,9 @@
-import React from 'react';
+'use client';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import { getToken } from '@/lib/api';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -8,6 +11,16 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, currentPath }: AppLayoutProps) {
+  // No session, no app: there was no guard at all, so a signed-out visitor at
+  // any address got the whole shell with an error in every panel. (W4)
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!getToken()) router.replace('/sign-up-login-screen');
+    else setReady(true);
+  }, [router]);
+  if (!ready) return <div className="h-screen" style={{ backgroundColor: 'var(--background)' }} />;
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
       <Sidebar currentPath={currentPath} />

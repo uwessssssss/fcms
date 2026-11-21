@@ -195,8 +195,10 @@ async function browserChecks(browser) {
     catch (e) { check('browser', `${user} signs in`, false, e.message.split('\n')[0]); await ctx.close(); continue; }
     // The demo turns "change it at first sign-in" off; a fresh install sends
     // the person to /change-password first, which has no sidebar.
-    check('browser', `${user} signs in and lands on the dashboard`, landed === '/', landed);
-    if (landed !== '/') { await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' }); await settle(page); }
+    // Company roles land on the dashboard; a station's people on their site.
+    const home = ['HO01', 'SYSADMIN'].includes(user) ? '/' : '/site-operations-detail';
+    check('browser', `${user} signs in and lands on ${home}`, landed === home, landed);
+    if (landed !== home) { await page.goto(BASE + home, { waitUntil: 'domcontentloaded' }); await settle(page); }
     // The screens this role's sidebar offers; head office opens them all.
     const offered = await page.$$eval('aside a[href^="/"], nav a[href^="/"]', (as) => [...new Set(as.map((a) => a.getAttribute('href')))]);
     const routes = user === 'HO01' ? [...new Set([...offered, ...ALL_ROUTES])] : offered;
@@ -254,7 +256,18 @@ async function passwordChange(browser) {
 }
 
 // ---- run ---------------------------------------------------------------------
-const browser = await chromium.launch();
+// Local dry runs against the mock screens: MOCK_ROLE makes the mock sign in
+// as a station role; VIEWPORT=390x844 checks phone width.
+const [VW, VH] = (process.env.VIEWPORT || '1440x900').split('x').map(Number);
+const browser0 = await chromium.launch();
+const browser = {
+  newContext: async (o = {}) => {
+    const ctx = await browser0.newContext({ ...o, viewport: { width: VW, height: VH } });
+    if (process.env.MOCK_ROLE) await ctx.addInitScript((r) => { try { localStorage.setItem('mock_role', r); } catch { /* none */ } }, process.env.MOCK_ROLE);
+    return ctx;
+  },
+  close: () => browser0.close(),
+};
 if (!SKIP_API) await apiChecks();
 await browserChecks(browser);
 await passwordChange(browser);

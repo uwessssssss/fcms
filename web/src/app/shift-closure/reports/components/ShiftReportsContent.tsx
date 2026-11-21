@@ -295,7 +295,7 @@ export default function ShiftReportsContent() {
               </thead>
               <tbody>
                 {filtered.map((r, i) => {
-                  const sc = statusConfig[r.status];
+                  const sc = statusConfig[r.status] ?? { ...Object.values(statusConfig)[0], label: String(r.status) };   // unknown value: neutral, not a crash
                   return (
                     <tr key={r.id} onClick={() => setDetailFor(r.id)} title="Open this shift" style={{ cursor: 'pointer', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3">
@@ -495,7 +495,7 @@ export default function ShiftReportsContent() {
                 </thead>
                 <tbody>
                   {filtered.map((r, i) => {
-                    const sc = statusConfig[r.status];
+                    const sc = statusConfig[r.status] ?? { ...Object.values(statusConfig)[0], label: String(r.status) };   // unknown value: neutral, not a crash
                     return (
                       <tr key={r.id} onClick={() => setDetailFor(r.id)} title="Open this shift" style={{ cursor: 'pointer', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 text-xs text-foreground whitespace-nowrap">{r.date}</td>

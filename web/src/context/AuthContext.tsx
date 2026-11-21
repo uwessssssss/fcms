@@ -1,5 +1,5 @@
 'use client';
-import { api, ApiError, setToken } from '@/lib/api';
+import { api, ApiError, setToken, SESSION_ENDED_EVENT } from '@/lib/api';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 /** What GET /api/auth/me returns. */
@@ -121,6 +121,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       });
+  }, []);
+
+  // The API said the session is gone: sign out here too and go to sign-in,
+  // saying why. (W4)
+  useEffect(() => {
+    const ended = () => {
+      setUser(null);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+      if (!window.location.pathname.startsWith('/sign-up-login-screen')) {
+        window.location.assign('/sign-up-login-screen?ended=1');
+      }
+    };
+    window.addEventListener(SESSION_ENDED_EVENT, ended);
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, ended);
   }, []);
 
   // The station's name, once its id is known (W1).

@@ -383,7 +383,7 @@ export default function UsersContent() {
       {/* Users Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((u) => {
-          const sc = statusConfig[u.status];
+          const sc = statusConfig[u.status] ?? { ...Object.values(statusConfig)[0], label: String(u.status) };   // unknown value: neutral, not a crash
           const rc = getRoleConfig(u.role);
           return (
             <div key={u.id} className="rounded-xl border p-4 space-y-3 hover:shadow-md transition-shadow" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>

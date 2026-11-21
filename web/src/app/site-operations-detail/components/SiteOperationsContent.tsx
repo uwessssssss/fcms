@@ -437,7 +437,7 @@ export default function SiteOperationsContent() {
             <h2 className="text-sm font-semibold text-foreground mb-3">Pump Status</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {pumps.map((pump) => {
-                const cfg = pumpStatusConfig[pump.status];
+                const cfg = pumpStatusConfig[pump.status] ?? pumpStatusConfig.idle;   // an unknown status must not take the screen down
                 return (
                   <div
                     key={pump.id}
@@ -466,7 +466,7 @@ export default function SiteOperationsContent() {
                     </div>
                     <div className="space-y-2">
                       {pump.nozzles.map((nozzle) => {
-                        const nCfg = nozzleStatusConfig[nozzle.status];
+                        const nCfg = nozzleStatusConfig[nozzle.status] ?? nozzleStatusConfig.idle;
                         return (
                           <div
                             key={nozzle.id}
@@ -507,7 +507,7 @@ export default function SiteOperationsContent() {
             <h2 className="text-sm font-semibold text-foreground mb-3">Tank Levels</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {tanks.map((tank) => {
-                const tCfg = tankStatusConfig[tank.status];
+                const tCfg = tankStatusConfig[tank.status] ?? tankStatusConfig.normal;
                 return (
                   <div
                     key={tank.id}

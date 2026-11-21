@@ -450,7 +450,7 @@ export default function CreditCustomersContent() {
               </thead>
               <tbody>
                 {filteredCustomers.map((c, i) => {
-                  const sc = statusConfig[c.status];
+                  const sc = statusConfig[c.status] ?? { ...Object.values(statusConfig)[0], label: String(c.status) };   // unknown value: neutral, not a crash
                   const utilisation = c.creditLimit > 0 ? (c.balance / c.creditLimit) * 100 : 0;
                   return (
                     <tr key={c.id} style={{ borderBottom: i < filteredCustomers.length - 1 ? '1px solid var(--border)' : 'none' }} className="hover:bg-muted/30 transition-colors">

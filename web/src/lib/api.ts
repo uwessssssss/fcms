@@ -65,6 +65,9 @@ export class ApiError extends Error {
   }
 }
 
+/** Raised on window when the API says the session is gone (401). */
+export const SESSION_ENDED_EVENT = "fcms:session-ended";
+
 export function setToken(token: string | null): void {
   if (typeof window === "undefined") return;
   if (token) sessionStorage.setItem(TOKEN_KEY, token);
@@ -187,6 +190,10 @@ async function request<T>(
 
     if (res.status === 401) {
       setToken(null);
+      // Tell the app, once, so it can sign the person out and take them to
+      // sign-in. Without it every screen just showed this message and stayed.
+      // (Audit Nov 2026, W4.)
+      if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_ENDED_EVENT));
       throw new ApiError(
         401,
         "SESSION_ENDED",

@@ -532,7 +532,7 @@ export default function DashboardContent() {
             </div>
           ) : (
             alerts.map((alert) => {
-              const cfg = alertTypeConfig[alert.type];
+              const cfg = alertTypeConfig[alert.type] ?? { ...Object.values(alertTypeConfig)[0], label: String(alert.type) };   // unknown value: neutral, not a crash
               return (
                 <div
                   key={alert.id}

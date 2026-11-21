@@ -1,7 +1,7 @@
 'use client';
 import { api, ApiError, setToken } from '@/lib/api';
 import type { LoginResponse } from '@/types/api';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import AppLogo from '@/components/ui/AppLogo';
 import Icon from '@/components/ui/AppIcon';
@@ -31,6 +31,12 @@ export default function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  // Sent here because the session ended (W4): say so, once.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('ended') === '1') {
+      setLoginError('Your session ended. Sign in again to carry on.');
+    }
+  }, []);
   const router = useRouter();
   const { login } = useAuth();
 
