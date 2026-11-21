@@ -1,0 +1,24 @@
+# One address for the whole system: /api/* (and /health) to the API, the rest
+# to the web app. Same origin, so the browser never makes a cross-site call.
+{$SITE_ADDRESS} {
+	encode gzip
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+	handle /health {
+		reverse_proxy api:5000
+	}
+	# Swagger stays private: a public demo does not need its API browsable.
+	handle /swagger* {
+		respond "Not here" 404
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

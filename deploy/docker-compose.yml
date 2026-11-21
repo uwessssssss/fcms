@@ -1,0 +1,72 @@
+# =============================================================================
+# FCMS dev server: the whole system on one machine, DEMO DATA ONLY.
+#
+#   cd deploy && cp .env.example .env   # fill it in
+#   docker compose up -d --build
+#
+# Four containers: PostgreSQL (restored once from db/sim/fcms_sim.dump -- the
+# simulated months, never a real station), the API, the web app, and Caddy in
+# front of both on ports 80/443, with an automatic HTTPS certificate when
+# SITE_ADDRESS is a real domain name. Only Caddy is reachable from outside.
+# =============================================================================
+name: fcms
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      FCMS_APP_PASSWORD: ${FCMS_APP_PASSWORD:?set FCMS_APP_PASSWORD in deploy/.env}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?set DEMO_PASSWORD in deploy/.env}
+      TZ: Africa/Kampala
+    volumes:
+      - fcms-db:/var/lib/postgresql/data
+      - ./db/10-fcms-demo.sh:/docker-entrypoint-initdb.d/10-fcms-demo.sh:ro
+      - ../db/sim/fcms_sim.dump:/fcms/fcms_sim.dump:ro
+    healthcheck:
+      # Ready means restored: the init script makes the fcms database last.
+      test: ["CMD-SHELL", "psql -U postgres -d fcms -Atc 'select count(*) from shift' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  api:
+    build: ../api
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      FCMS_DB: Host=db;Port=5432;Database=fcms;Username=fcms_app;Password=${FCMS_APP_PASSWORD};MaxPoolSize=25
+      Auth__SigningKey: ${AUTH_SIGNING_KEY:?set AUTH_SIGNING_KEY in deploy/.env}
+      # A demo open to the internet shows a reference, never a database error.
+      Errors__ShowDatabaseDetail: "false"
+      # Only Caddy can reach the API, so its X-Forwarded-For can be trusted:
+      # the sign-in limit is then per visitor, not one for everybody.
+      Proxy__TrustForwardedFor: "true"
+      Cors__Origins__0: ${PUBLIC_URL:?set PUBLIC_URL in deploy/.env}
+      TZ: Africa/Kampala
+
+  web:
+    build:
+      context: ../web
+      args:
+        # The browser calls the API through the same address as the site.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_URL}
+    restart: unless-stopped
+    depends_on: [api]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [api, web]
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  fcms-db:
+  caddy-data:
