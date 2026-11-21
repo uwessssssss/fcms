@@ -1,5 +1,6 @@
 'use client';
 import { api, ApiError } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import type { DashboardOverview, SiteOverviewRow } from '@/types/api';
 import { localDate } from '@/lib/dates';
 import React, { useState, useCallback, useEffect } from 'react';
@@ -163,26 +164,18 @@ export default function ReportsContent() {
       const headers = [
         'Site', 'Location', 'Status', 'Revenue (UGX)', 'Target (UGX)', 'vs Target (%)',
         'Transactions', 'Avg Transaction (UGX)', 'Litres Dispensed', 'Pump Uptime (%)',
-        'Unleaded (%)', 'Super Unleaded (%)', 'Diesel (%)', 'Premium Diesel (%)',
       ];
       const rows = filtered.map((s) => [
         s.name, s.location, s.status,
         s.revenue.toFixed(2), s.revenueTarget.toFixed(2), s.revenueVsTarget.toFixed(1),
         s.transactions, s.avgTransaction.toFixed(2), s.litresDispensed,
         s.pumpUptime,
-        s.fuelGradeMix?.unleaded ?? '', s.fuelGradeMix?.superUnleaded ?? '',
-        s.fuelGradeMix?.diesel ?? '', s.fuelGradeMix?.premiumDiesel ?? '',
       ]);
-      const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
       const label = period === 'daily' ? 'daily' : 'weekly';
       const dateStr = localDate();   // a file is named by the calendar
-      a.href = url;
-      a.download = `forecourt-${label}-report-${dateStr}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Quoted cells: a location like "Kiboga town, Hoima Rd" shifted every
+      // column after it when cells were joined with bare commas. (W7)
+      downloadCsv(`forecourt-${label}-report-${dateStr}.csv`, headers.map(String), rows);
       setExporting(false);
       showToast(`${label.charAt(0).toUpperCase() + label.slice(1)} report exported successfully`, 'success');
     }, 800);

@@ -10,6 +10,7 @@ import PartialLoadNotice from '@/components/ui/PartialLoadNotice';
 import { shiftLabelName } from '@/lib/shiftLabel';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Icon from '@/components/ui/AppIcon';
+import Link from 'next/link';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -297,9 +298,11 @@ export default function PaymentsContent() {
             MTN, Airtel, M-Pesa, Tigo, HaloPesa, Visa/Mastercard transactions
           </p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-          <Icon name="PlusIcon" size={15} />Record Payment
-        </button>
+        {/* This opened an eight-field form whose Save then refused: tenders are
+            declared per attendant at shift close. Say so, and go there. (D2) */}
+        <Link href="/shift-closure" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>
+          Declared at shift close <span aria-hidden="true">→</span>
+        </Link>
       </div>
 
       {/* KPIs */}
@@ -398,14 +401,9 @@ export default function PaymentsContent() {
                       <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{r.litres} L</td>
                       <td className="px-4 py-3 font-mono-nums text-xs font-semibold text-foreground">UGX {fmt(r.amount)}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => openEdit(r)} className="p-1.5 rounded-lg hover:bg-muted" title="Edit">
-                            <Icon name="PencilSquareIcon" size={14} style={{ color: 'var(--primary)' } as React.CSSProperties} />
-                          </button>
-                          <button onClick={() => setDeleteTarget(r.id)} className="p-1.5 rounded-lg hover:bg-muted" title="Delete">
-                            <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' } as React.CSSProperties} />
-                          </button>
-                        </div>
+                        {/* Edit and Delete only ever refused: a tender is part of an
+                            attendant's cash-up and is corrected there. (D2) */}
+                        <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>at close</span>
                       </td>
                     </tr>
                   );

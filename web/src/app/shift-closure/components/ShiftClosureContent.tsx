@@ -16,6 +16,7 @@ import type {
 } from '@/types/api';
 import { useSites } from '@/lib/useSites';
 import { businessToday } from '@/lib/dates';
+import { shiftLabelName } from '@/lib/shiftLabel';
 import PartialLoadNotice from '@/components/ui/PartialLoadNotice';
 import { Checker, errorCount, fieldStyle, hasErrors } from '@/lib/checks';
 import { IssueSummary } from '@/components/ui/Issues';
@@ -191,7 +192,11 @@ export default function ShiftClosureContent() {
   const { isSiteManager, assignedSite } = useAuth();
   const [activeTab, setActiveTab] = useState<'meters' | 'dippings' | 'sales' | 'expenses' | 'gainloss' | 'attendants'>('meters');
   const [shiftDate, setShiftDate] = useState(businessToday());
-  const [shiftType, setShiftType] = useState<'morning' | 'afternoon' | 'night'>('morning');
+  // The open shift's own label (DAY / NIGHT). This was a Morning / Afternoon /
+  // Night picker that loaded nothing -- the screen always closes the current
+  // shift -- but it, the date picker and the site picker headed the PRINTED
+  // closure sheet, so a sheet could name the wrong shift, day and site. (W6)
+  const [shiftLabelCode, setShiftLabelCode] = useState('');
   // The site's NAME, from the real site list. This defaulted to "Kampala
   // Central", a station that does not exist, and for a site manager it used
   // assignedSite -- which is an id, so the printed report header would have
@@ -242,6 +247,8 @@ export default function ShiftClosureContent() {
         const detail = await api.get<ShiftDetail>(`/api/shifts/${current.id}`);
         if (cancelled) return;
         setShiftId(detail.shift.id);
+        setShiftDate(current.businessDate.slice(0, 10));
+        setShiftLabelCode(current.label);
         setPumps(toClosurePumps(detail.assignments, detail.tanks));
         setTanks(detail.tanks.map(toShiftTank));
         const seen = new Map<string, Attendant>();
@@ -864,15 +871,13 @@ export default function ShiftClosureContent() {
         <div className="rounded-xl border p-4 flex flex-wrap items-center gap-4 no-print" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-2">
             <Icon name="CalendarDaysIcon" size={15} style={{ color: 'var(--muted-foreground)' } as React.CSSProperties} />
-            <input type="date" value={shiftDate} onChange={e => setShiftDate(e.target.value)} className="input-field py-1.5 px-3 text-sm rounded-lg" />
+            <span className="px-3 py-1.5 rounded-lg text-sm font-mono-nums" style={{ background: 'var(--muted)', color: 'var(--foreground)' }}>{shiftDate}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>Shift:</span>
-            <div className="flex gap-1 p-0.5 rounded-lg" style={{ backgroundColor: 'var(--muted)' }}>
-              {(['morning', 'afternoon', 'night'] as const).map(s => (
-                <button key={s} onClick={() => setShiftType(s)} className="px-3 py-1 rounded-md text-xs font-medium capitalize transition-all" style={{ backgroundColor: shiftType === s ? 'var(--primary)' : 'transparent', color: shiftType === s ? 'var(--primary-foreground)' : 'var(--muted-foreground)' }}>{s}</button>
-              ))}
-            </div>
+            <span className="px-3 py-1 rounded-md text-xs font-semibold" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+              {shiftLabelCode ? shiftLabelName(shiftLabelCode) : '—'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Icon name="BuildingStorefrontIcon" size={15} style={{ color: 'var(--muted-foreground)' } as React.CSSProperties} />
@@ -1526,7 +1531,7 @@ export default function ShiftClosureContent() {
         <div id="shift-print-area" ref={printRef} className="hidden print:block p-8 bg-white text-black">
           <div className="text-center mb-6 border-b-2 border-black pb-4">
             <h1 className="text-xl font-bold">SHIFT CLOSURE STATEMENT</h1>
-            <p className="text-sm">{site} | Date: {shiftDate} | Shift: {shiftType.toUpperCase()}</p>
+            <p className="text-sm">{(isSiteManager && assignedSite) || site} | Date: {shiftDate} | Shift: {shiftLabelCode ? shiftLabelName(shiftLabelCode) : '—'}</p>
           </div>
           <div className="mb-4">
             <h2 className="font-bold text-sm mb-2 border-b">PUMP ATTENDANT ALLOCATION</h2>

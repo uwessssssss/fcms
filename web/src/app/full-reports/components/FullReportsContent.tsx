@@ -3,6 +3,7 @@ import { useStatement, field, num } from '@/lib/useStatement';
 import { useSites } from '@/lib/useSites';
 import type { DailyLossRow, DivergenceRow } from '@/types/api';
 import { api } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import { businessToday, localDate, monthStartOf } from '@/lib/dates';
 import PartialLoadNotice from '@/components/ui/PartialLoadNotice';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -261,14 +262,9 @@ export default function FullReportsContent() {
           headers = ['Date', 'Site', 'Total Sales'];
           rows = filteredDaily.map(d => [d.date, d.site, d.totalSales]);
       }
-      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activeReport}-report-${localDate()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Quoted cells: a location like "Kiboga town, Hoima Rd" shifted every
+      // column after it when cells were joined with bare commas. (W7)
+      downloadCsv(`${activeReport}-report-${localDate()}.csv`, headers.map(String), rows);
       setExporting(false);
       showToast('Report exported successfully', 'success');
     }, 800);

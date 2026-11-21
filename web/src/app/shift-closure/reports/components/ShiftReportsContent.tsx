@@ -1,5 +1,6 @@
 'use client';
 import { api } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import type { AttendantTenderRow, ShiftActivity, ShiftReportRow } from '@/types/api';
 import { localDate } from '@/lib/dates';
 import { shiftLabelName } from '@/lib/shiftLabel';
@@ -155,14 +156,9 @@ export default function ShiftReportsContent() {
     setTimeout(() => {
       const headers = ['Date', 'Shift', 'Attendant', 'Site', 'Elec Sales (L)', 'Dip Consumed (L)', 'Gain/Loss (L)', 'Total Sales (UGX)', 'Cash (UGX)', 'Mobile Money (UGX)', 'Visa (UGX)', 'Credit (UGX)', 'Discounts (UGX)', 'Short (UGX)', 'Status'];
       const rows = filtered.map((r) => [r.date, r.shift, r.attendant, r.site, r.elecSales, r.dipConsumed, r.gainLoss, r.totalSales, r.cashSales, r.mobileMoney, r.visa, r.credit, r.discounts, r.short, r.status]);
-      const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `shift-closure-report-${localDate()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Quoted cells: a location like "Kiboga town, Hoima Rd" shifted every
+      // column after it when cells were joined with bare commas. (W7)
+      downloadCsv(`shift-closure-report-${localDate()}.csv`, headers.map(String), rows);
       setExporting(false);
       showToast('Shift closure report exported successfully', 'success');
     }, 800);

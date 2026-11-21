@@ -1,6 +1,7 @@
 'use client';
 import { useStatement, field, num } from '@/lib/useStatement';
 import { api, ApiError } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import { useSites } from '@/lib/useSites';
 import { businessToday, localDate } from '@/lib/dates';
 import { FormProblem } from '@/components/ui/Issues';
@@ -216,14 +217,9 @@ export default function ExpensesContent() {
   const handleExport = () => {
     const headers = ['Date', 'Site', 'Category', 'Description', 'Amount (UGX)', 'Payment Method', 'Approved By', 'Receipt'];
     const rows = filtered.map((e) => [e.date, e.site, e.category, e.description, e.amount, pmLabel[e.paymentMethod], e.approvedBy, e.receipt]);
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `expenses-${localDate()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // Quoted cells: a location like "Kiboga town, Hoima Rd" shifted every
+    // column after it when cells were joined with bare commas. (W7)
+    downloadCsv(`expenses-${localDate()}.csv`, headers.map(String), rows);
     showToast('Expenses exported', 'success');
   };
 
