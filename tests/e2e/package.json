@@ -1,0 +1,8 @@
+{
+  "name": "fcms-e2e",
+  "private": true,
+  "type": "module",
+  "description": "FCMS end-to-end: the real web app against the real API and database",
+  "scripts": { "test": "node e2e.mjs" },
+  "dependencies": { "playwright": "1.49.1" }
+}
