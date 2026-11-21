@@ -49,7 +49,7 @@ function toFeatureToggle(r: SettingRow): FeatureToggle {
     description: r.description,
     enabled: true,
     icon: r.kind === 'litres' ? 'BeakerIcon' : 'AdjustmentsHorizontalIcon',
-  } as FeatureToggle;
+  } satisfies FeatureToggle;
 }
 
 /** Fuel grades with their pump prices, from GET /api/v1/products. */
@@ -61,7 +61,7 @@ function toFuelGrade(r: ProductRow): FuelGrade {
     color: colours[r.code] ?? '#64748B',
     pricePerLitre: r.pumpPrice ?? 0,
     active: r.isActive,
-  } as FuelGrade;
+  } satisfies FuelGrade;
 }
 
 /**
@@ -77,7 +77,7 @@ function toProvider(r: ChannelRef): MobileMoneyProvider {
     country: r.kind,
     active: true,
     color: /mtn/i.test(r.name) ? '#FFCC00' : /airtel/i.test(r.name) ? '#E40000' : '#60A5FA',
-  } as MobileMoneyProvider;
+  } satisfies MobileMoneyProvider;
 }
 
 const CATEGORIES = ['Operations', 'Inventory', 'Revenue', 'Finance', 'Reports'];

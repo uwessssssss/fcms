@@ -151,7 +151,7 @@ function toSiteTank(r: TankInventoryRow): Tank {
     hoursToEmpty: r.hoursToEmpty ?? 0,
     lastDelivery: r.lastDelivery ? r.lastDelivery.slice(0, 10) : '—',
     nextDelivery: null,
-  } as Tank;
+  } satisfies Tank;
 }
 
 function toSiteAlert(r: AlertRow): SiteAlert {
@@ -205,7 +205,7 @@ function fmt(n: number) { return n.toLocaleString('en-UG'); }
 
 export default function SiteOperationsContent() {
   const router = useRouter();
-  const { isSiteManager, assignedSite, user } = useAuth();
+  const { isSiteManager, assignedSite, assignedSiteId, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts'>('overview');
   const [shiftSales, setShiftSales] = useState<ShiftSalesPoint[]>([]);
   const { showToast } = useToast();
@@ -224,7 +224,7 @@ export default function SiteOperationsContent() {
         // A site manager sees their own site. Head office has no site of its
         // own, so it sees the first trading site -- a picker belongs here, and
         // until there is one this at least shows something real.
-        let siteId = isSiteManager ? assignedSite : null;
+        let siteId = isSiteManager ? assignedSiteId : null;
         if (!siteId) {
           const overview = await api.get<DashboardOverview>('/api/v1/dashboard/overview');
           siteId = overview.sites[0]?.id ?? null;
@@ -267,7 +267,7 @@ export default function SiteOperationsContent() {
     return () => {
       cancelled = true;
     };
-  }, [isSiteManager, assignedSite]);
+  }, [isSiteManager, assignedSiteId]);
 
   const pumps = siteData.pumps;
   const tanks = siteData.tanks;

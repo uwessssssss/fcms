@@ -85,7 +85,7 @@ function toPaymentRecord(r: Record<string, unknown>): PaymentRecord {
     // A tender that reached the statement was accepted. Pending and failed
     // belong to a payment gateway this station does not have.
     status: 'confirmed',
-  } as PaymentRecord;
+  } satisfies PaymentRecord;
 }
 
 const emptyForm: Omit<PaymentRecord, 'id'> = {
@@ -131,7 +131,7 @@ export default function PaymentsContent() {
 
   // Site managers only see their own site's records
   const scopedRecords = isSiteManager && assignedSite
-    ? records.filter((r) => r.site === assignedSite)
+    ? records.filter((r) => !r.site || r.site === assignedSite)   // the API scopes a station's rows; some carry no site (W1)
     : records;
 
   const filtered = scopedRecords.filter((r) => {

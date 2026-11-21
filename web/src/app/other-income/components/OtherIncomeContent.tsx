@@ -57,7 +57,11 @@ function toIncomeItem(r: IncomeRow): IncomeItem {
     quantity: r.quantity,
     unitPrice: r.unitPrice,
     total: r.amount,
-  } as IncomeItem;
+    // Were missing (hidden by a cast): the Payment and Attendant columns were
+    // blank for every row. (W3)
+    paymentMethod: ({ CASH: 'Cash', MOBILE_MONEY: 'Mobile money', CARD: 'Card', ACCOUNT: 'On account' } as Record<string, string>)[r.settlement] ?? r.settlement,
+    attendant: r.recordedBy,
+  } satisfies IncomeItem;
 }
 
 const EMPTY_ITEM: Omit<IncomeItem, 'id'> = {
@@ -109,7 +113,7 @@ export default function OtherIncomeContent() {
   const { showToast } = useToast();
 
   const scopedIncome = isSiteManager && assignedSite
-    ? income.filter(i => i.site === assignedSite)
+    ? income.filter((i) => !i.site || i.site === assignedSite)   // the API scopes a station's rows; some carry no site (W1)
     : income;
 
   const filtered = scopedIncome.filter(i => {
@@ -368,7 +372,7 @@ export default function OtherIncomeContent() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-                {['Date', 'Site', 'Service', 'Category', 'Qty', 'Unit Price', 'Total', 'Payment', 'Attendant', 'Actions'].map(h => (
+                {['Date', 'Site', 'Service', 'Category', 'Qty', 'Unit Price', 'Total', 'Payment', 'Recorded by', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>{h}</th>
                 ))}
               </tr>

@@ -89,7 +89,7 @@ export default function PumpAttendantsContent() {
     };
   }, []);
 
-  const { isSiteManager, assignedSite } = useAuth();
+  const { isSiteManager, assignedSite, assignedSiteId } = useAuth();
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [siteFilter, setSiteFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -100,7 +100,7 @@ export default function PumpAttendantsContent() {
   const { showToast } = useToast();
 
   const scopedAttendants = isSiteManager && assignedSite
-    ? attendants.filter(a => a.site === assignedSite)
+    ? attendants.filter(a => !a.site || a.site === assignedSite)   // rows carry no site; the API scopes them (W1)
     : attendants;
 
   const filtered = scopedAttendants.filter(a => {
@@ -152,7 +152,7 @@ export default function PumpAttendantsContent() {
       return;
     }
     try {
-      let siteId = assignedSite;
+      let siteId = assignedSiteId;
       if (!siteId) {
         // Head office has no trading site of its own: use the one chosen.
         const ov = await api.get<DashboardOverview>('/api/v1/dashboard/overview');

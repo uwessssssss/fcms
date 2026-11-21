@@ -65,7 +65,7 @@ function toShort(r: Record<string, unknown>): Short {
     outstanding: num(r, 'outstanding'),
     notes: field(r, 'reason'),
     site: field(r, 'site'),
-  } as Short;
+  } satisfies Short;
 }
 
 const EMPTY_FORM = {
@@ -178,7 +178,7 @@ export default function AttendantShortsContent() {
   const { showToast } = useToast();
 
   const scopedShorts = isSiteManager && assignedSite
-    ? shorts.filter(s => s.site === assignedSite)
+    ? shorts.filter((s) => !s.site || s.site === assignedSite)   // the API scopes a station's rows; some carry no site (W1)
     : shorts;
 
   const filtered = scopedShorts.filter(s => {

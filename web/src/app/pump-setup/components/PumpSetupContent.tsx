@@ -46,7 +46,7 @@ function toSetupTank(r: TankInventoryRow): Tank {
     grade: r.gradeCode,
     gradeColor: colours[r.gradeCode] ?? '#64748B',
     capacity: r.capacityLitres,
-  } as Tank;
+  } satisfies Tank;
 }
 
 const GRADE_COLOUR: Record<string, string> = {

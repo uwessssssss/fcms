@@ -48,6 +48,11 @@ public sealed class StatementService
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
 
+    // As in BooksService: these roles see the company, not one station.
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "DIRECTOR", "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+    private bool SeesCompany => CompanyWide.Contains(_user.Role);
+
     public StatementService(IUnitOfWork uow, ICurrentUser user)
         => (_uow, _user) = (uow, user);
 
@@ -75,7 +80,8 @@ public sealed class StatementService
             + "to sit beside an MTN or Airtel printout when the two disagree.",
             "Money in",
             """
-            SELECT t.business_date          AS "date",
+            SELECT (SELECT name FROM site WHERE id = t.site_id) AS "site",
+                   t.business_date          AS "date",
                    t.shift_label            AS "shift",
                    t.attendant_name         AS "attendant",
                    COALESCE(t.channel_name, t.settlement) AS "channel",
@@ -83,7 +89,7 @@ public sealed class StatementService
                    t.reference              AS "reference",
                    t.amount                 AS "amount"
               FROM v_attendant_tender t
-             WHERE t.site_id = @site
+             WHERE (@site::uuid IS NULL OR t.site_id = @site)
                AND t.business_date BETWEEN @from AND @to
                AND t.settlement IN ('MOBILE_MONEY','CARD','VOUCHER')
              ORDER BY t.business_date DESC, t.attendant_name, t.channel_name
@@ -99,14 +105,15 @@ public sealed class StatementService
             + "is what is still in the safe -- or what is not.",
             "Money in",
             """
-            SELECT b.business_date  AS "date",
+            SELECT (SELECT name FROM site WHERE id = b.site_id) AS "site",
+                   b.business_date  AS "date",
                    b.slip_no        AS "slip",
                    b.bank_name      AS "bank",
                    s.full_name      AS "banked_by",
                    b.amount         AS "amount"
               FROM banking b
               LEFT JOIN staff s ON s.id = b.banked_by
-             WHERE b.site_id = @site AND b.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR b.site_id = @site) AND b.business_date BETWEEN @from AND @to
              ORDER BY b.business_date DESC
             """,
             [C("date", "Date", "date"), C("slip", "Slip", "figure"), C("bank", "Bank"),
@@ -120,7 +127,8 @@ public sealed class StatementService
             + "and why. Revenue is gross of these, so this is real margin given away.",
             "Money in",
             """
-            SELECT sh.business_date        AS "date",
+            SELECT (SELECT name FROM site WHERE id = sh.site_id) AS "site",
+                   sh.business_date        AS "date",
                    att.full_name           AS "attendant",
                    auth.full_name          AS "authorised_by",
                    d.amount                AS "amount",
@@ -129,7 +137,7 @@ public sealed class StatementService
               JOIN shift sh  ON sh.id = d.shift_id
               JOIN staff att ON att.id = d.staff_id
               LEFT JOIN staff auth ON auth.id = d.authorised_by
-             WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
              ORDER BY sh.business_date DESC, d.amount DESC
             """,
             [C("date", "Date", "date"), C("attendant", "Attendant"),
@@ -169,7 +177,7 @@ public sealed class StatementService
               LEFT JOIN (SELECT shortage_id, SUM(amount) AS recovered
                            FROM shortage_recovery GROUP BY shortage_id) rec
                      ON rec.shortage_id = ss.id
-             WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
              ORDER BY sh.business_date DESC, ss.amount DESC
             """,
             [C("date", "Date", "date"), C("attendant", "Attendant"),
@@ -198,7 +206,7 @@ public sealed class StatementService
                      ON md.meter_event_id = me.id AND md.kind = 'SALE'
               LEFT JOIN cash_up cu ON cu.shift_id = sh.id AND cu.staff_id = st.id
               LEFT JOIN staff_shortage ss ON ss.cash_up_id = cu.id
-             WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
              GROUP BY st.id, st.full_name, st.employee_no
              ORDER BY COALESCE(SUM(ss.amount), 0) DESC, SUM(md.litres) DESC
             """,
@@ -216,7 +224,8 @@ public sealed class StatementService
             + "evidence behind every variance figure in the system.",
             "Wet stock",
             """
-            SELECT COALESCE(sh.business_date, d.captured_at::date) AS "date",
+            SELECT (SELECT name FROM site WHERE id = d.site_id) AS "site",
+                   COALESCE(sh.business_date, d.captured_at::date) AS "date",
                    t.code             AS "tank",
                    p.code             AS "product",
                    d.context          AS "context",
@@ -229,7 +238,7 @@ public sealed class StatementService
               JOIN product p ON p.id = t.product_id
               LEFT JOIN shift sh ON sh.id = d.shift_id
               LEFT JOIN staff st ON st.id = d.recorded_by
-             WHERE d.site_id = @site
+             WHERE (@site::uuid IS NULL OR d.site_id = @site)
                AND COALESCE(sh.business_date, d.captured_at::date) BETWEEN @from AND @to
              ORDER BY d.captured_at DESC
             """,
@@ -245,7 +254,8 @@ public sealed class StatementService
             + "found. A single day is noise -- a column that only goes one way is not.",
             "Wet stock",
             """
-            SELECT l.business_date  AS "date",
+            SELECT (SELECT name FROM site WHERE id = l.site_id) AS "site",
+                   l.business_date  AS "date",
                    l.tank_code      AS "tank",
                    l.product_code   AS "product",
                    l.received_litres AS "received",
@@ -255,7 +265,7 @@ public sealed class StatementService
                    l.loss_litres    AS "difference",
                    l.loss_value     AS "at_cost"
               FROM v_daily_stock_loss l
-             WHERE l.site_id = @site AND l.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR l.site_id = @site) AND l.business_date BETWEEN @from AND @to
              ORDER BY l.business_date DESC, l.tank_code
             """,
             [C("date", "Date", "date"), C("tank", "Tank"), C("product", "Product"),
@@ -270,7 +280,8 @@ public sealed class StatementService
             + "given. This is the month-end trail an auditor asks for first.",
             "Wet stock",
             """
-            SELECT sc.counted_on       AS "date",
+            SELECT (SELECT name FROM site WHERE id = sc.site_id) AS "site",
+                   sc.counted_on       AS "date",
                    sc.kind             AS "kind",
                    t.code              AS "tank",
                    p.code              AS "product",
@@ -284,7 +295,7 @@ public sealed class StatementService
               JOIN tank t    ON t.id = sct.tank_id
               JOIN product p ON p.id = t.product_id
               LEFT JOIN staff st ON st.id = sc.counted_by
-             WHERE sc.site_id = @site AND sc.counted_on BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sc.site_id = @site) AND sc.counted_on BETWEEN @from AND @to
              ORDER BY sc.counted_on DESC, t.code
             """,
             [C("date", "Date", "date"), C("kind", "Kind", "pill"), C("tank", "Tank"),
@@ -299,7 +310,8 @@ public sealed class StatementService
             + "half a percent gives fuel away on every fill and shows nowhere else.",
             "Wet stock",
             """
-            SELECT m.business_date   AS "date",
+            SELECT (SELECT name FROM site WHERE id = m.site_id) AS "site",
+                   m.business_date   AS "date",
                    m.nozzle_label    AS "nozzle",
                    m.product_code    AS "product",
                    m.mechanical_litres AS "mechanical",
@@ -307,7 +319,7 @@ public sealed class StatementService
                    m.divergence_litres AS "drift",
                    m.divergence_pct  AS "drift_pct"
               FROM v_meter_divergence m
-             WHERE m.site_id = @site AND m.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR m.site_id = @site) AND m.business_date BETWEEN @from AND @to
              ORDER BY abs(m.divergence_litres) DESC
             """,
             [C("date", "Date", "date"), C("nozzle", "Nozzle"), C("product", "Product"),
@@ -321,7 +333,8 @@ public sealed class StatementService
             + "on delivery is the cheapest loss to prove and the easiest to miss.",
             "Wet stock",
             """
-            SELECT d.decant_ended_at::date AS "date",
+            SELECT (SELECT name FROM site WHERE id = d.site_id) AS "site",
+                   d.decant_ended_at::date AS "date",
                    d.delivery_note_no AS "note",
                    sup.name           AS "supplier",
                    d.truck_reg        AS "truck",
@@ -334,7 +347,7 @@ public sealed class StatementService
               JOIN delivery_line dl ON dl.delivery_id = d.id
               JOIN tank t   ON t.id = dl.tank_id
               LEFT JOIN supplier sup ON sup.id = d.supplier_id
-             WHERE d.site_id = @site
+             WHERE (@site::uuid IS NULL OR d.site_id = @site)
                AND COALESCE(d.decant_ended_at, d.arrived_at)::date BETWEEN @from AND @to
              ORDER BY COALESCE(d.decant_ended_at, d.arrived_at) DESC
             """,
@@ -350,7 +363,8 @@ public sealed class StatementService
             + "was bought and never sold, so it is a cost like any other.",
             "Wet stock",
             """
-            SELECT sh.business_date AS "date",
+            SELECT (SELECT name FROM site WHERE id = sh.site_id) AS "site",
+                   sh.business_date AS "date",
                    t.code           AS "tank",
                    p.code           AS "product",
                    ou.litres        AS "litres",
@@ -361,7 +375,7 @@ public sealed class StatementService
               JOIN tank t    ON t.id = ou.tank_id
               JOIN product p ON p.id = t.product_id
               LEFT JOIN staff st ON st.id = ou.authorised_by
-             WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
              ORDER BY sh.business_date DESC
             """,
             [C("date", "Date", "date"), C("tank", "Tank"), C("product", "Product"),
@@ -375,7 +389,8 @@ public sealed class StatementService
             + "that left the pump and returned to the tank, accounted for either way.",
             "Wet stock",
             """
-            SELECT sh.business_date AS "date",
+            SELECT (SELECT name FROM site WHERE id = sh.site_id) AS "site",
+                   sh.business_date AS "date",
                    pu.code          AS "pump",
                    nz.code          AS "nozzle",
                    pt.can_size_litres AS "can",
@@ -387,7 +402,7 @@ public sealed class StatementService
               JOIN nozzle nz ON nz.id = pt.nozzle_id
               JOIN pump pu   ON pu.id = nz.pump_id
               LEFT JOIN staff st ON st.id = pt.tested_by
-             WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
              ORDER BY sh.business_date DESC
             """,
             [C("date", "Date", "date"), C("pump", "Pump"), C("nozzle", "Nozzle"),
@@ -404,7 +419,8 @@ public sealed class StatementService
             + "The evidence behind every figure on a customer statement.",
             "Credit",
             """
-            SELECT cs.recorded_at::date AS "date",
+            SELECT (SELECT name FROM site WHERE id = cs.site_id) AS "site",
+                   cs.recorded_at::date AS "date",
                    c.name        AS "customer",
                    cs.voucher_no AS "voucher",
                    v.plate_no    AS "vehicle",
@@ -416,7 +432,7 @@ public sealed class StatementService
               JOIN credit_customer c ON c.id = cs.customer_id
               JOIN product p ON p.id = cs.product_id
               LEFT JOIN credit_vehicle v ON v.id = cs.vehicle_id
-             WHERE cs.site_id = @site AND cs.recorded_at::date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR cs.site_id = @site) AND cs.recorded_at::date BETWEEN @from AND @to
              ORDER BY cs.recorded_at DESC
             """,
             [C("date", "Date", "date"), C("customer", "Customer"),
@@ -486,7 +502,8 @@ public sealed class StatementService
             + "cash that will never reach the bank, so it is marked.",
             "Money out",
             """
-            SELECT e.business_date  AS "date",
+            SELECT (SELECT name FROM site WHERE id = e.site_id) AS "site",
+                   e.business_date  AS "date",
                    -- Carried but not shown: an expense cannot be approved
                    -- without naming which one.
                    e.id            AS "expense_id",
@@ -496,7 +513,7 @@ public sealed class StatementService
                    e.amount         AS "amount",
                    CASE WHEN e.approved_by IS NULL THEN 'Waiting' ELSE 'Approved' END AS "status"
               FROM expense e
-             WHERE e.site_id = @site AND e.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR e.site_id = @site) AND e.business_date BETWEEN @from AND @to
              ORDER BY e.business_date DESC
             """,
             [C("date", "Date", "date"), C("category", "Category", "pill"),
@@ -511,14 +528,15 @@ public sealed class StatementService
             + "and no payments looks like the best month of the year until this.",
             "Money out",
             """
-            SELECT sp.paid_on::date AS "date",
+            SELECT (SELECT name FROM site WHERE id = sp.site_id) AS "site",
+                   sp.paid_on::date AS "date",
                    s.name      AS "supplier",
                    sp.method   AS "method",
                    sp.reference AS "reference",
                    sp.amount   AS "amount"
               FROM supplier_payment sp
               JOIN supplier s ON s.id = sp.supplier_id
-             WHERE sp.site_id = @site AND sp.paid_on::date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sp.site_id = @site) AND sp.paid_on::date BETWEEN @from AND @to
              ORDER BY sp.paid_on DESC
             """,
             [C("date", "Date", "date"), C("supplier", "Supplier"),
@@ -536,7 +554,8 @@ public sealed class StatementService
             + "that did not cut a shift is a margin figure nobody can defend.",
             "Trading",
             """
-            SELECT pc.effective_from::date AS "date",
+            SELECT (SELECT name FROM site WHERE id = pc.site_id) AS "site",
+                   pc.effective_from::date AS "date",
                    p.code        AS "product",
                    pc.old_price  AS "from_price",
                    pc.new_price  AS "to_price",
@@ -544,7 +563,7 @@ public sealed class StatementService
                    pc.status::text AS "status"
               FROM price_change pc
               JOIN product p ON p.id = pc.product_id
-             WHERE pc.site_id = @site AND pc.effective_from::date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR pc.site_id = @site) AND pc.effective_from::date BETWEEN @from AND @to
              ORDER BY pc.effective_from DESC
             """,
             [C("date", "Date", "date"), C("product", "Product"),
@@ -559,7 +578,8 @@ public sealed class StatementService
             + "line where an LPG cylinder exchange is visible.",
             "Trading",
             """
-            SELECT sh.business_date AS "date",
+            SELECT (SELECT name FROM site WHERE id = sh.site_id) AS "site",
+                   sh.business_date AS "date",
                    ds.receipt_no    AS "receipt",
                    i.sku            AS "item",
                    i.name           AS "description",
@@ -570,7 +590,7 @@ public sealed class StatementService
               JOIN dry_sale_line dsl ON dsl.sale_id = ds.id
               JOIN dry_item i ON i.id = dsl.item_id
               JOIN shift sh   ON sh.id = ds.shift_id
-             WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
              ORDER BY sh.business_date DESC, ds.receipt_no
             """,
             [C("date", "Date", "date"), C("receipt", "Receipt", "figure"),
@@ -586,7 +606,8 @@ public sealed class StatementService
             + "load below cost is a month of retail margin gone.",
             "Trading",
             """
-            SELECT bs.loaded_at::date AS "date",
+            SELECT (SELECT name FROM site WHERE id = bs.site_id) AS "site",
+                   bs.loaded_at::date AS "date",
                    bs.invoice_no  AS "invoice",
                    c.name         AS "customer",
                    bs.truck_reg   AS "truck",
@@ -598,7 +619,7 @@ public sealed class StatementService
               FROM bulk_sale bs
               JOIN product p ON p.id = bs.product_id
               LEFT JOIN credit_customer c ON c.id = bs.customer_id
-             WHERE bs.site_id = @site AND bs.loaded_at::date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR bs.site_id = @site) AND bs.loaded_at::date BETWEEN @from AND @to
              ORDER BY bs.loaded_at DESC
             """,
             [C("date", "Date", "date"), C("invoice", "Invoice", "figure"),
@@ -624,7 +645,7 @@ public sealed class StatementService
                 JOIN meter_event me ON me.shift_id = sh.id
                 JOIN metered_disposition md
                        ON md.meter_event_id = me.id AND md.kind = 'SALE'
-               WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
                GROUP BY sh.business_date
             ),
             tenders AS (
@@ -633,13 +654,13 @@ public sealed class StatementService
                      SUM(t.amount) FILTER (WHERE t.settlement = 'MOBILE_MONEY')  AS momo,
                      SUM(t.amount) FILTER (WHERE t.settlement = 'CARD')          AS card
                 FROM v_attendant_tender t
-               WHERE t.site_id = @site AND t.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR t.site_id = @site) AND t.business_date BETWEEN @from AND @to
                GROUP BY t.business_date
             ),
             credit AS (
               SELECT cs.recorded_at::date AS d, SUM(cs.amount) AS amount
                 FROM credit_sale cs
-               WHERE cs.site_id = @site
+               WHERE (@site::uuid IS NULL OR cs.site_id = @site)
                  AND cs.recorded_at::date BETWEEN @from AND @to
                GROUP BY cs.recorded_at::date
             ),
@@ -647,19 +668,19 @@ public sealed class StatementService
               SELECT sh.business_date AS d, SUM(dg.amount) AS amount
                 FROM discount_grant dg
                 JOIN shift sh ON sh.id = dg.shift_id
-               WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
                GROUP BY sh.business_date
             ),
             spend AS (
               SELECT e.business_date AS d, SUM(e.amount) AS amount
                 FROM expense e
-               WHERE e.site_id = @site AND e.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR e.site_id = @site) AND e.business_date BETWEEN @from AND @to
                GROUP BY e.business_date
             ),
             variance AS (
               SELECT l.business_date AS d, SUM(l.loss_litres) AS litres
                 FROM v_daily_stock_loss l
-               WHERE l.site_id = @site AND l.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR l.site_id = @site) AND l.business_date BETWEEN @from AND @to
                GROUP BY l.business_date
             ),
             shorts AS (
@@ -667,7 +688,7 @@ public sealed class StatementService
                 FROM staff_shortage ss
                 JOIN cash_up c ON c.id = ss.cash_up_id
                 JOIN shift sh  ON sh.id = c.shift_id
-               WHERE sh.site_id = @site AND sh.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR sh.site_id = @site) AND sh.business_date BETWEEN @from AND @to
                GROUP BY sh.business_date
             )
             SELECT s.d                          AS "date",
@@ -708,7 +729,8 @@ public sealed class StatementService
             + "answered it. An exception nobody resolved is a control that does not exist.",
             "Control",
             """
-            SELECT e.raised_at::date AS "date",
+            SELECT (SELECT name FROM site WHERE id = e.site_id) AS "site",
+                   e.raised_at::date AS "date",
                    e.code      AS "kind",
                    e.level     AS "level",
                    e.entity    AS "about",
@@ -717,7 +739,7 @@ public sealed class StatementService
                    e.resolution AS "resolution"
               FROM exception_flag e
               LEFT JOIN staff st ON st.id = e.resolved_by
-             WHERE e.site_id = @site AND e.raised_at::date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR e.site_id = @site) AND e.raised_at::date BETWEEN @from AND @to
              ORDER BY e.raised_at DESC
             """,
             [C("date", "Date", "date"), C("kind", "Kind"), C("level", "Level", "pill"),
@@ -731,7 +753,8 @@ public sealed class StatementService
             + "A shift closed for a price change reads differently from one that ran out.",
             "Control",
             """
-            SELECT s.business_date AS "date",
+            SELECT (SELECT name FROM site WHERE id = s.site_id) AS "site",
+                   s.business_date AS "date",
                    s.label::text   AS "shift",
                    s.segment       AS "part",
                    op.full_name    AS "opened_by",
@@ -743,7 +766,7 @@ public sealed class StatementService
               LEFT JOIN staff op ON op.id = s.opened_by
               LEFT JOIN staff cl ON cl.id = s.closed_by
               LEFT JOIN staff ap ON ap.id = s.approved_by
-             WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to
              ORDER BY s.business_date DESC, s.segment
             """,
             [C("date", "Date", "date"), C("shift", "Shift", "pill"),
@@ -775,7 +798,12 @@ public sealed class StatementService
         var conn = await _uow.ConnectionAsync(ct);
         var rows = (await conn.QueryAsync(new CommandDefinition(
             def.Sql,
-            new { site = _user.SiteId, from, to },
+            // Company-wide roles see every site (each row names its site); a
+            // station sees its own. Every statement used to be filtered to the
+            // caller's own site, and head office's own site trades nothing, so
+            // head office saw empty shortages, expenses, deliveries, dips...
+            // (Audit Nov 2026, W2.)
+            new { site = SeesCompany ? (Guid?)null : _user.SiteId, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
         var shaped = rows

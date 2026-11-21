@@ -174,7 +174,7 @@ export default function CreditCustomersContent() {
 
   // Site managers only see their own site's customers
   const scopedCustomers = isSiteManager && assignedSite
-    ? customers.filter((c) => c.site === assignedSite)
+    ? customers.filter((c) => !c.site || c.site === assignedSite)   // rows carry no site; the API scopes them (W1)
     : customers;
 
   const filteredCustomers = scopedCustomers.filter((c) => {

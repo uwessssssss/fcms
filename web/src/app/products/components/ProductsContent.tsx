@@ -48,7 +48,15 @@ function toProduct(r: ProductRow): Product {
     costPrice: 0,
     sellingPrice: r.pumpPrice ?? 0,
     stockQty: Math.round(r.stockLitres),
-  } as Product;
+    // These were missing (hidden by a cast): every product showed Inactive,
+    // the Active count was 0 and the Active filter emptied the list. (W3)
+    status: r.isActive ? 'active' : 'inactive',
+    // A fuel grade has no reorder level of its own: running low is a tank's
+    // business (Tank Inventory). 0 = flagged only when there is none left.
+    reorderLevel: 0,
+    supplier: '',
+    description: r.tankCount === 1 ? 'In 1 tank' : `In ${r.tankCount} tanks`,
+  } satisfies Product;
 }
 
 const EMPTY_FORM = {

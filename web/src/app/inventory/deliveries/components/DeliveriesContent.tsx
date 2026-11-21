@@ -83,7 +83,7 @@ function toDelivery(r: Record<string, unknown>): Delivery {
     // the whole reason this screen exists.
     gainLoss: num(r, 'variance'),
     notes: field(r, 'status'),
-  } as Delivery;
+  } satisfies Delivery;
 }
 
 const EMPTY_DELIVERY: Omit<Delivery, 'id'> = {
@@ -126,7 +126,7 @@ export default function DeliveriesContent() {
 
   // Site managers only see their own site's deliveries
   const scopedDeliveries = isSiteManager && assignedSite
-    ? deliveries.filter((d) => d.site === assignedSite)
+    ? deliveries.filter((d) => !d.site || d.site === assignedSite)   // the API scopes a station's rows; some carry no site (W1)
     : deliveries;
 
   const filtered = scopedDeliveries.filter(d => {

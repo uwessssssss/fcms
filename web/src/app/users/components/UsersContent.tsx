@@ -100,7 +100,7 @@ export default function UsersContent() {
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
   const clearProblem = (k: string) => setProblems((p) => { if (!(k in p)) return p; const n = { ...p }; delete n[k]; return n; });
   const SITES = ['All Sites', ...useSites()];
-  const { assignedSite } = useAuth();
+  const { assignedSite, assignedSiteId } = useAuth();
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,7 +206,7 @@ export default function UsersContent() {
 
     try {
       await api.post<{ id: string }>('/api/v1/organisation/people', {
-        siteId: assignedSite,
+        siteId: assignedSiteId,
         employeeNo: form.email.trim().toUpperCase(),
         fullName: form.name.trim(),
         role: roleForServer,
@@ -229,7 +229,7 @@ export default function UsersContent() {
       // would leave somebody wondering whether the server was down.
       showToast(err.message, 'error');
     }
-  }, [form, editing, showToast, assignedSite, clearProblem, flagProblem]);
+  }, [form, editing, showToast, assignedSiteId, clearProblem, flagProblem]);
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {

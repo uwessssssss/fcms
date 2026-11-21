@@ -99,7 +99,7 @@ export default function TankInventoryContent() {
   const effectiveSite = isSiteManager && assignedSite ? assignedSite : selectedSite;
 
   const scopedTanks = isSiteManager && assignedSite
-    ? tanks.filter((t) => t.site === assignedSite)
+    ? tanks.filter((t) => !t.site || t.site === assignedSite)   // the API scopes a station's rows; some carry no site (W1)
     : tanks;
 
   const filtered = effectiveSite === 'All Sites'

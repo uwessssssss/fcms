@@ -52,7 +52,7 @@ function toDailySummary(r: Record<string, unknown>): DailySummary {
     litresSold: num(r, 'litres'),
     gainLoss: num(r, 'gain_loss'),
     short: num(r, 'short'),
-  } as DailySummary;
+  } satisfies DailySummary;
 }
 
 
@@ -220,7 +220,7 @@ export default function FullReportsContent() {
   const effectiveSiteFilter = isSiteManager && assignedSite ? assignedSite : filterSite;
 
   const filteredDaily = dailyData.filter(d => {
-    if (isSiteManager && assignedSite && d.site !== assignedSite) return false;
+    if (isSiteManager && assignedSite && d.site && d.site !== assignedSite) return false;   // W1
     if (!isSiteManager && filterSite !== 'all' && d.site !== filterSite) return false;
     if (d.date < dateFrom || d.date > dateTo) return false;
     return true;

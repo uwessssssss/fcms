@@ -80,7 +80,9 @@ export default function LoginContent() {
         // A director sees every site; everyone else is scoped to theirs. The
         // server enforces this with row-level security regardless -- this only
         // decides what the interface offers.
-        assignedSite:
+        // The id; AuthContext looks up the station's name (W1).
+        assignedSite: null,
+        assignedSiteId:
           ['DIRECTOR', 'SYSTEM_ADMIN', 'HEAD_OFFICE'].includes(res.role) ? null : res.siteId,
         staffId: res.staffId,
       });

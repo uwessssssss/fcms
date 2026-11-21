@@ -56,7 +56,9 @@ function toStockItem(r: DryItemView): StockItem {
     sold: 0,
     closingStock: r.onHand,
     reorderLevel: r.reorderLevel,
-  } as StockItem;
+    supplier: '',
+    site: '',
+  } satisfies StockItem;
 }
 
 const EMPTY_ITEM: Omit<StockItem, 'id'> = {
@@ -119,12 +121,14 @@ export default function OtherStocksContent() {
 
   const filtered = scopedStock.filter(s => {
     if (categoryFilter !== 'all' && s.category !== categoryFilter) return false;
-    if (!isSiteManager && siteFilter !== 'all' && s.site !== siteFilter) return false;
+    if (!isSiteManager && siteFilter !== 'all' && s.site && s.site !== siteFilter) return false;
     if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const totalValue = filtered.reduce((sum, s) => sum + s.closingStock * s.costPrice, 0);
+  // At selling price: the API carries no cost for shop stock (cost lives on
+  // each receipt). Valued at cost it read UGX 0 for everything. (W3)
+  const totalValue = filtered.reduce((sum, s) => sum + s.closingStock * s.sellingPrice, 0);
   const lowStock = filtered.filter(s => s.closingStock <= s.reorderLevel).length;
   const totalSalesValue = filtered.reduce((sum, s) => sum + s.sold * s.sellingPrice, 0);
 
@@ -335,7 +339,7 @@ export default function OtherStocksContent() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Stock Value', value: `UGX ${fmt(totalValue)}`, icon: 'ArchiveBoxIcon', color: 'var(--primary)' },
+          { label: 'Retail value', value: `UGX ${fmt(totalValue)}`, icon: 'ArchiveBoxIcon', color: 'var(--primary)' },
           { label: 'Sales Value', value: `UGX ${fmt(totalSalesValue)}`, icon: 'BanknotesIcon', color: '#60A5FA' },
           { label: 'Low Stock Items', value: String(lowStock), icon: 'ExclamationTriangleIcon', color: lowStock > 0 ? '#F59E0B' : 'var(--primary)' },
         ].map(kpi => (
@@ -363,12 +367,6 @@ export default function OtherStocksContent() {
           <option value="all">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        {!isSiteManager && (
-          <select className="input-field w-auto" value={siteFilter} onChange={e => setSiteFilter(e.target.value)}>
-            <option value="all">All Sites</option>
-            {SITES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
       </div>
 
       {/* Table */}
@@ -377,7 +375,9 @@ export default function OtherStocksContent() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                {['Product', 'Category', !isSiteManager ? 'Site' : null, 'Opening', 'Received', 'Sold', 'Closing', 'Reorder', 'Cost Price', 'Sell Price', 'Stock Value', 'Actions']
+                {/* Opening, received and sold were always 0 and cost always 0:
+                    the API gives what is on hand now, and the selling price. (W3) */}
+                {['Product', 'Category', 'On hand', 'Reorder at', 'Sell price', 'Retail value', 'Actions']
                   .filter(Boolean).map(h => (
                   <th key={h!} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>{h}</th>
                 ))}
@@ -385,7 +385,7 @@ export default function OtherStocksContent() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={12} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>No stock items found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>No stock items found</td></tr>
               )}
               {filtered.map((item, i) => {
                 const isLow = item.closingStock <= item.reorderLevel;
@@ -393,13 +393,9 @@ export default function OtherStocksContent() {
                   <tr key={item.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3">
                       <p className="text-xs font-medium text-foreground">{item.name}</p>
-                      <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{item.supplier} · {item.unit}</p>
+                      <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{item.supplier ? `${item.supplier} · ` : ''}{item.unit}</p>
                     </td>
                     <td className="px-4 py-3 text-xs" style={{ color: 'var(--muted-foreground)' }}>{item.category}</td>
-                    {!isSiteManager && <td className="px-4 py-3 text-xs" style={{ color: 'var(--muted-foreground)' }}>{item.site}</td>}
-                    <td className="px-4 py-3 text-xs font-mono-nums text-foreground">{item.openingStock}</td>
-                    <td className="px-4 py-3 text-xs font-mono-nums" style={{ color: '#60A5FA' }}>{item.received}</td>
-                    <td className="px-4 py-3 text-xs font-mono-nums" style={{ color: '#F59E0B' }}>{item.sold}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs font-mono-nums font-semibold" style={{ color: isLow ? '#ef4444' : 'var(--foreground)' }}>
                         {item.closingStock}
@@ -407,9 +403,8 @@ export default function OtherStocksContent() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{item.reorderLevel}</td>
-                    <td className="px-4 py-3 text-xs font-mono-nums text-foreground">{fmt(item.costPrice)}</td>
-                    <td className="px-4 py-3 text-xs font-mono-nums text-foreground">{fmt(item.sellingPrice)}</td>
-                    <td className="px-4 py-3 text-xs font-mono-nums font-semibold text-foreground">{fmt(item.closingStock * item.costPrice)}</td>
+                    <td className="px-4 py-3 text-xs font-mono-nums text-foreground">{item.sellingPrice ? fmt(item.sellingPrice) : '—'}</td>
+                    <td className="px-4 py-3 text-xs font-mono-nums font-semibold text-foreground">{item.sellingPrice ? fmt(item.closingStock * item.sellingPrice) : '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Edit">

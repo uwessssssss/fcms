@@ -114,7 +114,7 @@ export default function ExpensesContent() {
 
   // Site managers only see their own site's expenses
   const scopedExpenses = isSiteManager && assignedSite
-    ? expenses.filter((e) => e.site === assignedSite)
+    ? expenses.filter((e) => !e.site || e.site === assignedSite)   // the API scopes a station's rows; some carry no site (W1)
     : expenses;
 
   const filtered = scopedExpenses.filter((e) => {
