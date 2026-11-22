@@ -376,6 +376,9 @@ export default function PaymentsContent() {
                 </tr>
               </thead>
               <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={12} className="px-4 py-6 text-xs text-center" style={{ color: 'var(--muted-foreground)' }}>No mobile money or card takings in this period.</td></tr>
+                )}
                 {filtered.map((r, i) => {
                   const sc = statusConfig[r.status] ?? { ...Object.values(statusConfig)[0], label: String(r.status) };   // unknown value: neutral, not a crash
                   const provColor = r.type === 'mobile_money' ? getProviderColor(r.provider) : '#3b82f6';

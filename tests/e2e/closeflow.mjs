@@ -45,6 +45,7 @@ try {
 
   const site = sql(`SELECT site_id FROM staff WHERE employee_no = 'SUP01'`);
   const tanks = sql(`SELECT id || '|' || code FROM tank WHERE site_id = '${site}' AND is_active ORDER BY code`).split('\n').map((l) => l.split('|'));
+  const lastDip = (t) => Number(sql(`SELECT round(product_litres, 1) FROM dip_reading WHERE tank_id = '${t}' AND context = 'SHIFT_CLOSE' ORDER BY captured_at DESC, id DESC LIMIT 1`));
   const atts = sql(`SELECT id FROM staff WHERE site_id = '${site}' AND role = 'ATTENDANT' AND is_active ORDER BY employee_no LIMIT 3`).split('\n');
 
   // ---- open -------------------------------------------------------------------
@@ -52,7 +53,8 @@ try {
   check('Shift Operations offers to open a shift', await page.getByText('Open a shift', { exact: true }).count() > 0);
   await page.getByLabel('Which shift').selectOption('NIGHT');
   for (const [id, code] of tanks) {
-    await page.locator('label', { hasText: code }).locator('input[type="number"]').first().fill(String(Number(sql(`SELECT round(fn_book_stock('${id}'), 1)`))));
+    // What is in the ground: the tank's last closing dip, as a supervisor dips it.
+    await page.locator('label', { hasText: code }).locator('input[type="number"]').first().fill(String(lastDip(id)));
   }
   const rosterSelects = page.locator('select', { has: page.locator('option', { hasText: 'Nobody' }) });
   await rosterSelects.nth(0).selectOption(atts[0]);
@@ -99,7 +101,7 @@ try {
   for (const [id, code] of tanks) {
     const out = Number(sql(`SELECT COALESCE(SUM(15), 0) FROM nozzle_assignment na JOIN nozzle n ON n.id = na.nozzle_id
                               WHERE na.shift_id = '${shiftId}' AND n.tank_id = '${id}'`));   // 15 L per holding
-    const dip = Math.round((Number(sql(`SELECT fn_book_stock('${id}')`)) - out) * 10) / 10;
+    const dip = Math.round((lastDip(id) - out) * 10) / 10;   // the ground, less what the meters let out
     await page.locator('main tr', { hasText: code }).locator('input[type="number"]').first().fill(String(dip));
   }
   await shot('5-dips');

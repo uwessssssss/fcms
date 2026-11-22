@@ -96,7 +96,10 @@ await settle();
     const db = Number(sql(`SELECT balance FROM fn_customer_headroom('${c.id}')`));
     check('truth', 'Credit customers', `${c.code}: balance is the database's`, near(c.balance, db), `${c.balance} vs ${db}`);
     check('logic', 'Credit customers', `${c.code}: headroom = limit - balance`, near(c.headroom, c.creditLimit - c.balance), `${c.headroom}`);
-    await shows('Credit customers', `${c.code} shows its balance`, 'UGX ' + await fmtIn(c.balance, 0, 3));
+    // As the screen writes it: whole shillings or two places; paid ahead in words.
+    const b = Math.abs(c.balance), dp = Number.isInteger(b) ? 0 : 2;
+    await shows('Credit customers', `${c.code} shows its balance`,
+      c.balance < 0 ? `UGX ${await fmtIn(b, dp, dp)} paid ahead` : 'UGX ' + await fmtIn(b, dp, dp));
   }
 }
 

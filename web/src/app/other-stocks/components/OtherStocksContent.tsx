@@ -261,7 +261,7 @@ export default function OtherStocksContent() {
           <div className="w-full max-w-lg rounded-2xl p-6 space-y-4 slide-up" style={{ background: 'linear-gradient(160deg, #0F1C2E 0%, #0A1220 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-foreground">{editId ? 'Edit Stock Item' : 'Add Stock Item'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Close" title="Close">
                 <Icon name="XMarkIcon" size={20} />
               </button>
             </div>

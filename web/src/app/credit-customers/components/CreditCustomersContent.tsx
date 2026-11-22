@@ -531,6 +531,9 @@ export default function CreditCustomersContent() {
                 </tr>
               </thead>
               <tbody>
+                {customerTxs.length === 0 && (
+                  <tr><td colSpan={8} className="px-4 py-6 text-xs text-center" style={{ color: 'var(--muted-foreground)' }}>No transactions in this period.</td></tr>
+                )}
                 {customerTxs.map((t, i) => {
                   const cust = customers.find(c => c.id === t.customerId);
                   return (

@@ -242,7 +242,7 @@ export default function OtherIncomeContent() {
           <div className="rounded-2xl border w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="px-6 py-4 border-b flex items-center justify-between sticky top-0" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}>
               <h3 className="text-base font-bold text-foreground">{editId ? 'Edit Income Record' : 'Record Income'}</h3>
-              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-muted">
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Close" title="Close">
                 <Icon name="XMarkIcon" size={16} style={{ color: 'var(--muted-foreground)' } as React.CSSProperties} />
               </button>
             </div>
@@ -393,10 +393,10 @@ export default function OtherIncomeContent() {
                   <td className="px-4 py-3 text-xs text-foreground">{item.attendant}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-muted">
+                      <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Edit" title="Edit">
                         <Icon name="PencilSquareIcon" size={13} style={{ color: 'var(--primary)' } as React.CSSProperties} />
                       </button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-muted">
+                      <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Delete" title="Delete">
                         <Icon name="TrashIcon" size={13} style={{ color: '#ef4444' } as React.CSSProperties} />
                       </button>
                     </div>

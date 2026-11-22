@@ -1467,7 +1467,7 @@ export default function ShiftClosureContent() {
                       {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <input type="number" value={e.amount || ''} onChange={ev => updateExpense(e.id, 'amount', Number(ev.target.value))} className="input-field py-1.5 px-2 text-xs w-28 font-mono-nums rounded-lg" placeholder="Amount" min="0" />
-                    <button onClick={() => removeExpense(e.id)} className="p-1 rounded hover:bg-muted">
+                    <button onClick={() => removeExpense(e.id)} className="p-1 rounded hover:bg-muted" aria-label="Close" title="Close">
                       <Icon name="XMarkIcon" size={13} style={{ color: '#ef4444' } as React.CSSProperties} />
                     </button>
                   </div>
@@ -1496,7 +1496,7 @@ export default function ShiftClosureContent() {
                     <input type="text" value={d.description} onChange={ev => updateDiscount(d.id, 'description', ev.target.value)} className="input-field py-1.5 px-2 text-xs flex-1 rounded-lg" placeholder="Description" />
                     <input type="number" value={d.amount || ''} onChange={ev => updateDiscount(d.id, 'amount', Number(ev.target.value))} className="input-field py-1.5 px-2 text-xs w-24 font-mono-nums rounded-lg" placeholder="Amount" min="0" />
                     <input type="text" value={d.authorisedBy} onChange={ev => updateDiscount(d.id, 'authorisedBy', ev.target.value)} className="input-field py-1.5 px-2 text-xs w-24 rounded-lg" placeholder="Auth by" />
-                    <button onClick={() => removeDiscount(d.id)} className="p-1 rounded hover:bg-muted">
+                    <button onClick={() => removeDiscount(d.id)} className="p-1 rounded hover:bg-muted" aria-label="Close" title="Close">
                       <Icon name="XMarkIcon" size={13} style={{ color: '#ef4444' } as React.CSSProperties} />
                     </button>
                   </div>

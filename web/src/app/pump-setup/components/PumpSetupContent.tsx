@@ -463,10 +463,10 @@ export default function PumpSetupContent() {
                   <button onClick={() => openAddNozzle(pump.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: 'rgba(0,212,160,0.1)', color: 'var(--primary)', border: '1px solid rgba(0,212,160,0.2)' }}>
                     <Icon name="PlusIcon" size={12} />Add Nozzle
                   </button>
-                  <button onClick={() => openEditPump(pump)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  <button onClick={() => openEditPump(pump)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }} aria-label="Edit" title="Edit">
                     <Icon name="PencilIcon" size={14} className="text-foreground" />
                   </button>
-                  <button onClick={() => deletePump(pump.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                  <button onClick={() => deletePump(pump.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }} aria-label="Delete" title="Delete">
                     <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' }} />
                   </button>
                 </div>
@@ -486,10 +486,10 @@ export default function PumpSetupContent() {
                             <span className="text-xs font-bold text-foreground">Nozzle {nozzle.nozzleNo}</span>
                           </div>
                           <div className="flex gap-1">
-                            <button onClick={() => openEditNozzle(pump.id, nozzle)} className="p-1 rounded" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                            <button onClick={() => openEditNozzle(pump.id, nozzle)} className="p-1 rounded" style={{ background: 'rgba(255,255,255,0.05)' }} aria-label="Edit" title="Edit">
                               <Icon name="PencilIcon" size={11} className="text-foreground" />
                             </button>
-                            <button onClick={() => deleteNozzle(pump.id, nozzle.id)} className="p-1 rounded" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                            <button onClick={() => deleteNozzle(pump.id, nozzle.id)} className="p-1 rounded" style={{ background: 'rgba(239,68,68,0.1)' }} aria-label="Delete" title="Delete">
                               <Icon name="TrashIcon" size={11} style={{ color: '#ef4444' }} />
                             </button>
                           </div>
@@ -549,10 +549,10 @@ export default function PumpSetupContent() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          <button onClick={() => openEditTank(tank)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                          <button onClick={() => openEditTank(tank)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }} aria-label="Edit" title="Edit">
                             <Icon name="PencilIcon" size={14} className="text-foreground" />
                           </button>
-                          <button onClick={() => deleteTank(tank.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                          <button onClick={() => deleteTank(tank.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }} aria-label="Delete" title="Delete">
                             <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' }} />
                           </button>
                         </div>

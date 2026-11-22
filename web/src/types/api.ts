@@ -291,6 +291,9 @@ export interface EquipmentRow {
   inUse: boolean;
   /** A nozzle's tank; null for tanks and pumps. */
   tankId: string | null;
+  /** A nozzle's last closing readings: what an opening carries when nothing is typed. */
+  lastManual: number | null;
+  lastElectronic: number | null;
 }
 
 // --- site operations --------------------------------------------------------

@@ -55,6 +55,10 @@ public sealed class EquipmentRow
     public bool InUse { get; set; }
     /// <summary>A nozzle's tank; null for tanks and pumps.</summary>
     public Guid? TankId { get; set; }
+    /// <summary>A nozzle's last closing readings, manual and electronic: what
+    /// an opening carries when nothing is typed.</summary>
+    public decimal? LastManual { get; set; }
+    public decimal? LastElectronic { get; set; }
 }
 
 public record UpsertTank(string Code, Guid ProductId, decimal NominalLitres,
@@ -385,7 +389,8 @@ public sealed class AdminService
                      || to_char(t.safe_fill, 'FM999,999,990') || ' L' AS Detail,
                    NULL::text AS ParentCode, t.is_active AS IsActive,
                    (fn_book_stock(t.id) > t.dead_stock) AS InUse,
-                   NULL::uuid AS TankId
+                   NULL::uuid AS TankId,
+                   NULL::numeric AS LastManual, NULL::numeric AS LastElectronic
               FROM tank t JOIN product p ON p.id = t.product_id
              WHERE t.site_id = @site
 
@@ -397,7 +402,7 @@ public sealed class AdminService
                    EXISTS (SELECT 1 FROM nozzle n
                             JOIN nozzle_assignment na ON na.nozzle_id = n.id
                            WHERE n.pump_id = pu.id AND na.state = 'ACTIVE'),
-                   NULL::uuid
+                   NULL::uuid, NULL::numeric, NULL::numeric
               FROM pump pu WHERE pu.site_id = @site
 
             UNION ALL
@@ -409,8 +414,14 @@ public sealed class AdminService
                             WHERE na.nozzle_id = n.id AND na.state = 'ACTIVE'),
                    -- the tank it draws from: the screen matched the tank by this
                    -- row's description, never found it, and said "no tank linked"
-                   t.id
+                   t.id,
+                   -- what an opening carries when nothing is typed (730)
+                   lc.volume_totalizer, lc.electronic_totalizer
               FROM nozzle n
+              LEFT JOIN LATERAL (
+                SELECT mr.volume_totalizer, mr.electronic_totalizer FROM meter_reading mr
+                 WHERE mr.nozzle_id = n.id AND NOT mr.is_opening
+                 ORDER BY mr.captured_at DESC, mr.id DESC LIMIT 1) lc ON TRUE
               JOIN pump pu ON pu.id = n.pump_id
               JOIN tank t  ON t.id = n.tank_id
               JOIN product p ON p.id = t.product_id

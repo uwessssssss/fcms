@@ -401,10 +401,10 @@ export default function ProductsContent() {
                         >
                           Price
                         </button>
-                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }} aria-label="Edit" title="Edit">
                           <Icon name="PencilIcon" size={14} className="text-foreground" />
                         </button>
-                        <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                        <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }} aria-label="Delete" title="Delete">
                           <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' }} />
                         </button>
                       </div>

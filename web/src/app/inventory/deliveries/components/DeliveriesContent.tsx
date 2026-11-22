@@ -251,7 +251,7 @@ export default function DeliveriesContent() {
           <div className="rounded-2xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="px-6 py-4 border-b flex items-center justify-between sticky top-0" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}>
               <h3 className="text-base font-bold text-foreground">{editId ? 'Edit Delivery' : 'Record New Delivery'}</h3>
-              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-muted">
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Close" title="Close">
                 <Icon name="XMarkIcon" size={16} style={{ color: 'var(--muted-foreground)' } as React.CSSProperties} />
               </button>
             </div>
@@ -467,10 +467,10 @@ export default function DeliveriesContent() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(d)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                      <button onClick={() => openEdit(d)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Edit" title="Edit">
                         <Icon name="PencilSquareIcon" size={13} style={{ color: 'var(--primary)' } as React.CSSProperties} />
                       </button>
-                      <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                      <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Delete" title="Delete">
                         <Icon name="TrashIcon" size={13} style={{ color: '#ef4444' } as React.CSSProperties} />
                       </button>
                     </div>

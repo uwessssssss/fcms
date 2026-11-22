@@ -206,7 +206,14 @@ export default function ShiftOperationsContent() {
     if (nozzles.length > 0 && held.length === 0) c.error('roster', 'Put at least one attendant on a nozzle');
     for (const n of nozzles) {
       const r = roster[n.id], f = `roster:${n.id}`, name = `${n.parentCode ? n.parentCode + ' ' : ''}${n.code}`;
-      if (r?.attendantId) c.number(f, r.totalizer, `${name}: the opening meter reading`, { min: 0 });
+      // Blank carries the nozzle's last closing reading, as the server does (730);
+      // a figure typed is checked. A nozzle never read before has nothing to carry.
+      if (r?.attendantId) {
+        if (!blank(r.totalizer)) c.number(f, r.totalizer, `${name}: the opening manual reading`, { min: 0 });
+        else if (n.lastManual == null) c.error(f, `${name}: read the manual meter - nothing is on record to carry`);
+        if (!blank(r.elec)) c.number(f, r.elec, `${name}: the opening electronic reading`, { min: 0 });
+        else if (n.lastElectronic == null) c.error(f, `${name}: read the electronic meter - nothing is on record to carry`);
+      }
       else if (r && !blank(r.totalizer)) c.warn(f, `${name}: a reading but nobody holds it - it will not be opened`);
     }
     return c.issues;
@@ -425,8 +432,8 @@ export default function ShiftOperationsContent() {
           <div>
             <p className="text-xs font-semibold mb-2 text-foreground">Who holds which nozzle</p>
             <p className="text-xs mb-2" style={{ color: 'var(--muted-foreground)' }}>
-              The opening totalizer is what the pump head reads NOW. If it differs from
-              last night&apos;s close, say so rather than carrying the old figure forward.
+              Each meter&apos;s last closing reading is carried (shown in grey). Type a figure
+              only if the pump head reads something else now.
             </p>
             <div className="space-y-2">
               {nozzles.map((n) => (
@@ -446,14 +453,14 @@ export default function ShiftOperationsContent() {
                     ))}
                   </select>
                   <input
-                    type="number" min={0} placeholder="Manual" aria-label="Manual meter" className="input-field text-xs text-right"
+                    type="number" min={0} placeholder={n.lastManual != null ? `${n.lastManual.toLocaleString()} (carried)` : 'Manual'} aria-label="Manual meter" className="input-field text-xs text-right"
                     style={fieldStyle(openIssues, `roster:${n.id}`, openTried)}
                     value={roster[n.id]?.totalizer ?? ''}
                     onChange={(e) =>
                       setRoster((p) => ({ ...p, [n.id]: { ...p[n.id], attendantId: p[n.id]?.attendantId ?? '', totalizer: e.target.value } }))}
                   />
                   <input
-                    type="number" min={0} placeholder="Electronic" aria-label="Electronic meter" className="input-field text-xs text-right"
+                    type="number" min={0} placeholder={n.lastElectronic != null ? `${n.lastElectronic.toLocaleString()} (carried)` : 'Electronic'} aria-label="Electronic meter" className="input-field text-xs text-right"
                     title="Blank carries the electronic reading from this nozzle's last close. Its first ever opening must be read."
                     value={roster[n.id]?.elec ?? ''}
                     onChange={(e) =>

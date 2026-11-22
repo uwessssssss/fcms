@@ -82,7 +82,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
               className="w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-white/10"
               style={{ color: 'var(--muted-foreground)' }}
-            >
+             aria-label="Close" title="Close">
               <Icon name="XMarkIcon" size={13} />
             </button>
           </div>

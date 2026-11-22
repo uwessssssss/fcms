@@ -305,6 +305,9 @@ export default function ShiftReportsContent() {
                 </tr>
               </thead>
               <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={9} className="px-4 py-6 text-xs text-center" style={{ color: 'var(--muted-foreground)' }}>No closed shifts in the last 14 days.</td></tr>
+                )}
                 {filtered.map((r, i) => {
                   const sc = statusConfig[r.status] ?? { ...Object.values(statusConfig)[0], label: String(r.status) };   // unknown value: neutral, not a crash
                   return (
