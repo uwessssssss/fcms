@@ -34,6 +34,7 @@ copies it -- never an older copy.
 | `fn_open_depot_day` | function | `490_depot_day_opens.sql` | 2 |
 | `fn_platform_create_company` | function | `300_company_first_person.sql` | 2 |
 | `fn_record_bulk_credit` | function | `210_credit_limit_race.sql` | 2 |
+| `fn_staff_no_director` | function | `740_no_director_coded.sql` | 2 |
 | `fn_transfer_stock` | function | `540_cost_includes_opening_stock.sql` | 2 |
 | `trg_credential_revoke_rule` | function | `510_app_can_delete.sql` | 2 |
 | `trg_credit_allowed` | function | `480_credit_trigger_per_table.sql` | 2 |
@@ -113,7 +114,6 @@ copies it -- never an older copy.
 | `fn_session_is_live` | function | `020_people.sql` | 1 |
 | `fn_set_password` | function | `090_admin.sql` | 1 |
 | `fn_shift_price` | function | `042_pricing.sql` | 1 |
-| `fn_staff_no_director` | function | `690_station_records.sql` | 1 |
 | `fn_station_scope_ok` | function | `530_station_scope.sql` | 1 |
 | `fn_void_cash_drop` | function | `580_cash_drop.sql` | 1 |
 | `fn_water_litres` | function | `190_dips_in_litres.sql` | 1 |

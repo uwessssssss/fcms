@@ -110,6 +110,7 @@ MIGRATIONS=(
   710_variance_at_close_moment.sql # audit Nov 2026: variance measured from the previous close's moment, not its dip stamp
   720_depot_day_local_date.sql   # audit Nov 2026: a depot day counts its own day's loads, by the site's clock
   730_close_everything_in.sql    # both meters on every reading, within 1 L; no close with a delivery decanting or a shortage unexplained
+  740_no_director_coded.sql      # the Director refusal, coded for the screen
 )
 
 ensure_ledger() {

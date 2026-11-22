@@ -160,8 +160,8 @@ r = await person(ho, 'HEAD_OFFICE', null, 6);
 check('head office cannot appoint head office', r.status === 403, `${r.status} ${r.code}`);
 r = await person(adm, 'HEAD_OFFICE', null, 7);
 check('a system administrator appoints head office, at the head office', r.status === 200 && placed(7) === headOffice, `${r.status} ${r.code ?? ''}`);
-r = await person(adm, 'DIRECTOR', null, 8);
-check('nobody can appoint a director', r.status >= 400, `${r.status} ${r.code}`);
+r = await person(adm, 'DIRECTOR', site, 8);
+check('nobody can appoint a director', r.status === 422 && r.code === 'NO_DIRECTOR', `${r.status} ${r.code}`);
 
 fs.mkdirSync('out', { recursive: true });
 fs.writeFileSync('out/FLOW.json', JSON.stringify(results, null, 2));
