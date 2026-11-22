@@ -72,11 +72,15 @@ try {
       JOIN nozzle n ON n.id = na.nozzle_id WHERE na.shift_id = '${shiftId}' ORDER BY n.code LIMIT 1`).split('|');
   await page.locator('select', { has: page.locator('option', { hasText: 'Who is handing over...' }) }).selectOption(asgA);
   await page.locator('select', { has: page.locator('option', { hasText: 'Taking over...' }) }).selectOption(atts[2]);
-  await page.getByPlaceholder('Manual meter at handover').fill(String(Number(openManual) + 15));
-  await page.getByPlaceholder('Electronic meter at handover').fill(String(Number(openElec) + 15.2));
+  await page.getByPlaceholder('Manual meter at handover').fill((Number(openManual) + 15).toFixed(1));
+  await page.getByPlaceholder('Electronic meter at handover').fill((Number(openElec) + 15.2).toFixed(2));   // as typed off the head: two places
   await shot('3-handover-filled');
+  const handReply = page.waitForResponse((r) => r.url().includes('/api/forecourt/handover'), { timeout: 15000 })
+    .then(async (r) => `${r.status()} ${(await r.text()).slice(0, 200)}`).catch(() => 'no request was sent');
   await page.getByRole('button', { name: 'Record handover' }).click();
-  check('the handover is recorded on both meters', await toast(/Handover recorded/i));
+  const handOk = await toast(/Handover recorded/i);
+  await shot('3b-handover-result');
+  check('the handover is recorded on both meters', handOk, handOk ? '' : await handReply);
   await settle();
 
   // ---- close: meters ----------------------------------------------------------

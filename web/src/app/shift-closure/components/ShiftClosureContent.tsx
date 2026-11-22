@@ -173,7 +173,8 @@ function toClosurePumps(asg: AssignmentView[], shiftTanks: TankView[]): Pump[] {
   }));
 }
 
-/** The shift's tanks. Opening is the book figure the close will reconcile against. */
+/** The shift's tanks: opening is the dip taken at open (the book only if none was taken),
+ *  deliveries are what was received into the tank during the shift. */
 function toShiftTank(t: TankView): Tank {
   return {
     id: t.tankId,
@@ -181,9 +182,9 @@ function toShiftTank(t: TankView): Tank {
     grade: t.productCode,
     gradeColor: GRADE_COLOUR[t.productCode] ?? '#64748B',
     capacity: t.nominalLitres,
-    openingDip: t.bookLitres,
-    closingDip: null,
-    deliveries: 0,
+    openingDip: t.openingLitres ?? t.bookLitres,
+    closingDip: t.actualLitres ?? null,
+    deliveries: t.receivedLitres ?? 0,
   };
 }
 
@@ -365,11 +366,10 @@ export default function ShiftClosureContent() {
     attendantId: p.attendantId,
     // Nothing is "sold" until a closing reading is typed. Without the guard
     // every nozzle showed 0 minus its opening -- a six-figure NEGATIVE sale.
-    // The electronic head's absolute value legitimately differs from the
-    // mechanical one (only deltas compare), and its opening is held on the
-    // server, so its drift comes back from close-preview rather than from
-    // subtracting two unrelated numbers here.
-    elecSold: 0,
+    // Each head is compared with its OWN opening (only deltas compare), which
+    // the server now supplies. It was fixed at 0, so "Total Elec. Sales" read
+    // 0.0 L on a shift that had sold fuel.
+    elecSold: n.closeElec > 0 ? Math.max(0, n.closeElec - n.openElec) : 0,
     // A backwards reading counts as nothing sold until the supervisor asserts a
     // rollover; the server works out the rolled figure from the meter's digit
     // count, so the running total here stays conservative rather than guessing.
@@ -432,6 +432,9 @@ export default function ShiftClosureContent() {
     fillPct: ((t.closingDip ?? 0) / t.capacity) * 100,
   }));
   const totalDipConsumed = tankTotals.reduce((s, t) => s + t.consumed, 0);
+  // A tank not yet dipped has no consumption; reading its blank as 0 showed the
+  // whole tank as lost before anyone had dipped it.
+  const dipsPending = tanks.some((t) => t.closingDip === null);
 
   // ── Computed: Sales ──
   const totalMobileMoney = mtnMM + airtelMM + mpesaMM + tigoPesa;
@@ -462,8 +465,8 @@ export default function ShiftClosureContent() {
     return { grade, elecTotal, dipConsumed, gl, glValue: gl * price };
   });
 
-  const totalGainLoss = gradeGainLoss.reduce((s, g) => s + g.gl, 0);
-  const totalGainLossValue = gradeGainLoss.reduce((s, g) => s + g.glValue, 0);
+  const totalGainLoss = dipsPending ? 0 : gradeGainLoss.reduce((s, g) => s + g.gl, 0);
+  const totalGainLossValue = dipsPending ? 0 : gradeGainLoss.reduce((s, g) => s + g.glValue, 0);
 
   // ── Accounting balance check ──
   // What the meters say is owed: each nozzle's MECHANICAL litres, less any
@@ -481,7 +484,7 @@ export default function ShiftClosureContent() {
   const totalRtt = allNozzles.reduce((t, n) => t + n.rtt, 0);
   const accountingItems = [
     { label: 'Meter readings entered', ok: totalManualSold > 0 },
-    { label: 'Dipping records entered', ok: totalDipConsumed > 0 },
+    { label: 'Dipping records entered', ok: tanks.length > 0 && !dipsPending },
     { label: 'Every attendant has declared', ok: attendants.length > 0 && attendants.every((a) => declared[a.id] !== undefined) },
     { label: 'Checked against the server', ok: preview !== null },
     { label: 'Attendants allocated to all pumps', ok: pumps.every(p => p.attendantId !== '') },
@@ -932,7 +935,7 @@ export default function ShiftClosureContent() {
           {[
             { label: 'Total Elec. Sales', value: `${fmt(totalElecSold, 1)} L`, icon: 'BoltIcon', color: 'var(--primary)' },
             { label: 'Net Sales', value: fmtUGX(netSales), icon: 'BanknotesIcon', color: '#22c55e' },
-            { label: 'Daily Gain/Loss', value: `${fmt(Math.abs(totalGainLoss), 1)} L`, icon: totalGainLoss >= 0 ? 'ArrowTrendingUpIcon' : 'ArrowTrendingDownIcon', color: totalGainLoss >= 0 ? '#22c55e' : '#ef4444', suffix: totalGainLoss >= 0 ? 'GAIN' : 'LOSS' },
+            { label: 'Daily Gain/Loss', value: dipsPending ? '\u2014' : `${fmt(Math.abs(totalGainLoss), 1)} L`, icon: totalGainLoss >= 0 ? 'ArrowTrendingUpIcon' : 'ArrowTrendingDownIcon', color: dipsPending ? 'var(--muted-foreground)' : totalGainLoss >= 0 ? '#22c55e' : '#ef4444', suffix: dipsPending ? 'dip every tank' : totalGainLoss >= 0 ? 'GAIN' : 'LOSS' },
             { label: 'Total Expenses', value: fmtUGX(totalExpenses), icon: 'ReceiptRefundIcon', color: '#f59e0b' },
             { label: 'Cash Short', value: fmtUGX(Math.abs(cashShort)), icon: 'ExclamationTriangleIcon', color: isShort ? '#ef4444' : '#22c55e', suffix: isShort ? 'SHORT' : 'OK' },
           ].map(card => (
@@ -1137,9 +1140,10 @@ export default function ShiftClosureContent() {
                     </thead>
                     <tbody>
                       {pump.nozzles.map((n, i) => {
-                        const elecSold = n.closeElec - n.openElec;
-                        const manualSold = n.closeManual - n.openManual;
-                        const variance = elecSold - manualSold;
+                        // Blank until a closing reading is typed: 0 minus the opening is not a sale.
+                        const elecSold = n.closeElec > 0 ? n.closeElec - n.openElec : 0;
+                        const manualSold = n.closeManual > 0 ? n.closeManual - n.openManual : 0;
+                        const variance = n.closeElec > 0 && n.closeManual > 0 ? elecSold - manualSold : 0;
                         const tank = tanks.find(t => t.id === n.tankId);
                         return (
                           <tr key={n.id} style={{ borderBottom: i < pump.nozzles.length - 1 ? '1px solid var(--border)' : 'none' }} className="hover:bg-muted/30">
@@ -1232,15 +1236,15 @@ export default function ShiftClosureContent() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <input type="number" value={t.openingDip} onChange={e => updateTank(t.id, 'openingDip', Number(e.target.value))} className="input-field py-1 px-2 text-xs w-24 font-mono-nums" />
+                          <span className="font-mono-nums text-xs text-foreground" title="Dipped when the shift opened">{fmt(t.openingDip, 1)}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <input type="number" value={t.deliveries} onChange={e => updateTank(t.id, 'deliveries', Number(e.target.value))} className="input-field py-1 px-2 text-xs w-24 font-mono-nums" />
+                          <span className="font-mono-nums text-xs text-foreground" title="Received on the Deliveries screen during this shift">{fmt(t.deliveries, 1)}</span>
                         </td>
                         <td className="px-4 py-3">
                           <input type="number" style={fieldStyle(closeIssues, `dip:${t.id}`, closeTried)} value={t.closingDip ?? ''} onChange={e => updateTank(t.id, 'closingDip', e.target.value === '' ? null : Number(e.target.value))} className="input-field py-1 px-2 text-xs w-24 font-mono-nums" />
                         </td>
-                        <td className="px-4 py-3 font-mono-nums text-xs font-semibold" style={{ color: 'var(--primary)' }}>{fmt(t.consumed, 1)} L</td>
+                        <td className="px-4 py-3 font-mono-nums text-xs font-semibold" style={{ color: 'var(--primary)' }}>{t.closingDip === null ? '\u2014' : `${fmt(t.consumed, 1)} L`}</td>
                         <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmt(t.capacity)} L</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -1257,7 +1261,7 @@ export default function ShiftClosureContent() {
                 <tfoot>
                   <tr style={{ borderTop: '2px solid var(--border)', backgroundColor: 'var(--muted)' }}>
                     <td colSpan={6} className="px-4 py-3 text-xs font-bold text-foreground">TOTAL CONSUMED</td>
-                    <td className="px-4 py-3 font-mono-nums text-sm font-bold" style={{ color: 'var(--primary)' }}>{fmt(totalDipConsumed, 1)} L</td>
+                    <td className="px-4 py-3 font-mono-nums text-sm font-bold" style={{ color: 'var(--primary)' }}>{dipsPending ? '\u2014' : `${fmt(totalDipConsumed, 1)} L`}</td>
                     <td colSpan={2} />
                   </tr>
                 </tfoot>
@@ -1522,9 +1526,9 @@ export default function ShiftClosureContent() {
               <div className="p-5 space-y-3">
                 {[
                   { label: 'Electronic Meter Total', value: `${fmt(totalElecSold, 1)} L`, color: 'var(--primary)' },
-                  { label: 'Dipping Consumed Total', value: `${fmt(totalDipConsumed, 1)} L`, color: 'var(--foreground)' },
-                  { label: 'Daily Gain/Loss (Volume)', value: `${totalGainLoss >= 0 ? '+' : ''}${fmt(totalGainLoss, 2)} L`, color: totalGainLoss >= 0 ? '#22c55e' : '#ef4444' },
-                  { label: 'Daily Gain/Loss (Value)', value: `${totalGainLossValue >= 0 ? '+' : ''}UGX ${fmt(Math.abs(totalGainLossValue))}`, color: totalGainLossValue >= 0 ? '#22c55e' : '#ef4444' },
+                  { label: 'Dipping Consumed Total', value: dipsPending ? '\u2014' : `${fmt(totalDipConsumed, 1)} L`, color: 'var(--foreground)' },
+                  { label: 'Daily Gain/Loss (Volume)', value: dipsPending ? '\u2014 (dip every tank)' : `${totalGainLoss >= 0 ? '+' : ''}${fmt(totalGainLoss, 2)} L`, color: totalGainLoss >= 0 ? '#22c55e' : '#ef4444' },
+                  { label: 'Daily Gain/Loss (Value)', value: dipsPending ? '\u2014' : `${totalGainLossValue < 0 ? '-' : '+'}UGX ${fmt(Math.abs(totalGainLossValue))}`, color: totalGainLossValue >= 0 ? '#22c55e' : '#ef4444' },
                 ].map(row => (
                   <div key={row.label} className="flex justify-between items-center py-2 border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
                     <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>{row.label}</span>

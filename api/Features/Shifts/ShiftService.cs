@@ -178,6 +178,10 @@ public sealed class TankView
     public string Code { get; set; } = "";
     public string ProductCode { get; set; } = "";
     public decimal BookLitres { get; set; }
+    /// <summary>The dip taken when this shift opened; null if none was taken.</summary>
+    public decimal? OpeningLitres { get; set; }
+    /// <summary>Litres posted into this tank by deliveries decanted in this shift.</summary>
+    public decimal ReceivedLitres { get; set; }
     public decimal? ActualLitres { get; set; }
     public decimal? VarianceLitres { get; set; }
     public decimal? VariancePct { get; set; }
@@ -562,6 +566,11 @@ public sealed class ShiftService
                    t.safe_fill      AS SafeFill,
                    t.dead_stock     AS DeadStock,
                    d.product_litres    AS ActualLitres,
+                   -- What the close screen reconciles from: the shift's own opening
+                   -- dip and what went in during it. It showed the book as the
+                   -- "opening dip", so a blank closing dip read as the whole tank lost.
+                   o.product_litres    AS OpeningLitres,
+                   rcv.litres          AS ReceivedLitres,
                    -- The change since this tank's previous close, not the standing gap (430).
                    fn_close_variance(t.id, d.product_litres, COALESCE(s.closed_at, now()), s.id) AS VarianceLitres,
                    CASE WHEN sold.litres > 0
@@ -578,6 +587,14 @@ public sealed class ShiftService
                 SELECT product_litres FROM dip_reading
                  WHERE tank_id = t.id AND shift_id = @id AND context = 'SHIFT_CLOSE'
                  ORDER BY captured_at DESC LIMIT 1) d ON TRUE
+              LEFT JOIN LATERAL (
+                SELECT product_litres FROM dip_reading
+                 WHERE tank_id = t.id AND shift_id = @id AND context = 'SHIFT_OPEN'
+                 ORDER BY captured_at, id LIMIT 1) o ON TRUE
+              LEFT JOIN LATERAL (
+                SELECT COALESCE(SUM(fm.litres), 0) AS litres
+                  FROM fuel_movement fm
+                 WHERE fm.shift_id = @id AND fm.tank_id = t.id AND fm.kind = 'DELIVERY_IN') rcv ON TRUE
               LEFT JOIN LATERAL (
                 SELECT COALESCE(SUM(md.litres), 0) AS litres
                   FROM meter_event me

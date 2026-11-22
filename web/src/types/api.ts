@@ -429,6 +429,10 @@ export interface TankView {
   code: string;
   productCode: string;
   bookLitres: number;
+  /** The dip taken when this shift opened; null if none was taken. */
+  openingLitres: number | null;
+  /** Litres posted into the tank by deliveries decanted in this shift. */
+  receivedLitres: number;
   actualLitres: number | null;
   varianceLitres: number | null;
   variancePct: number | null;
