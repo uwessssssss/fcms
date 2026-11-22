@@ -190,7 +190,11 @@ jobs:
           set +e
           node e2e.mjs;    screens=$?
           node values.mjs; values=$?
-          exit $(( screens || values ))
+          # last: it closes a shift and appoints people in the demo
+          node flow.mjs;   flow=$?
+          # the shift it closed, recomputed from its readings with the rest
+          psql -d fcms -X -q -v ON_ERROR_STOP=1 -f ../../tools/audit/shift_math.sql | grep "SHIFT MATH"; audit=${PIPESTATUS[0]}
+          exit $(( screens || values || flow || audit ))
 
       - name: Report
         if: always()
