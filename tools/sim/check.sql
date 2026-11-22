@@ -73,6 +73,12 @@ BEGIN
      AND NOT EXISTS (SELECT 1 FROM gl_journal j WHERE j.source = 'shift' AND j.source_id = sh.id::text);
   IF n > 0 THEN RAISE EXCEPTION 'SIM: % closed shift(s) never reached the books', n; END IF;
 
+  -- (680) The balance the Credit Customers screen shows (v_credit_ageing) is
+  -- the customer's true balance, depot credit sales included.
+  SELECT count(*) INTO n FROM v_credit_ageing a CROSS JOIN LATERAL fn_customer_headroom(a.customer_id) h
+   WHERE a.balance <> h.balance;
+  IF n > 0 THEN RAISE EXCEPTION 'SIM: % customer(s) listed at a balance that is not theirs', n; END IF;
+
   RAISE NOTICE 'all hard checks pass';
 END $$;
 

@@ -104,6 +104,7 @@ MIGRATIONS=(
   650_security_hardening.sql     # audit Nov 2026: tenant and actor checks in the books, append-only records
   660_money_scope.sql            # audit Nov 2026: bank and wallet accounts keep to their station
   670_wallet_match_order.sql     # audit Nov 2026: wallets matched by shift window before amount
+  680_credit_ageing_depot.sql    # audit Nov 2026: customer balances count depot credit sales
 )
 
 ensure_ledger() {

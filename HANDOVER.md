@@ -10,7 +10,7 @@ distrust. The last of those is the most useful section.
 
 | | |
 |---|---|
-| Database | PostgreSQL 16, **68 migrations**, **101 integrity tests**, **19 attacks that must fail** (db/test/security.sql) |
+| Database | PostgreSQL 16, **69 migrations**, **101 integrity tests**, **19 attacks that must fail** (db/test/security.sql) |
 | API | .NET 8 + Dapper, **111 endpoints**, **22 statements** |
 | Web | Next.js, **21 screens**, dark operations console |
 | Checks | **12 static checkers** plus a TypeScript compile, one command |

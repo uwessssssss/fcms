@@ -63,8 +63,12 @@ const CONTRACTS = (() => {
 })();
 const contractFaults = new Map();   // key -> { call, file, type, missing }
 function checkContract(apiPath, body) {
-  for (const c of CONTRACTS) {
-    if (!c.re.test(apiPath)) continue;
+  // The most specific contracts only: /api/shifts/current is not judged by
+  // /api/shifts/{id}'s (a false mismatch in the first field run).
+  const matching = CONTRACTS.filter((c) => c.re.test(apiPath));
+  const best = Math.max(-1, ...matching.map((c) => c.lit));
+  for (const c of matching) {
+    if (c.lit < best) continue;
     const rows = c.array ? (Array.isArray(body) ? body.slice(0, 5) : null) : [body];
     if (!rows) { contractFaults.set(`${apiPath}|${c.file}|shape`, { call: apiPath, file: c.file, type: c.type, missing: ['(expected a list)'] }); continue; }
     const missing = new Set();

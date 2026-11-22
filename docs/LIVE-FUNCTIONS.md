@@ -39,6 +39,7 @@ copies it -- never an older copy.
 | `trg_staff_appointment_rule` | function | `290_platform_and_grants.sql` | 2 |
 | `trg_tenant_chart` | function | `650_security_hardening.sql` | 2 |
 | `v_cash_position` | view | `360_cash_accountability.sql` | 2 |
+| `v_credit_ageing` | view | `680_credit_ageing_depot.sql` | 2 |
 | `v_credit_ageing_buckets` | view | `450_paid_ahead.sql` | 2 |
 | `v_credit_sale_settlement` | view | `440_one_account_per_customer.sql` | 2 |
 | `v_credit_statement` | view | `440_one_account_per_customer.sql` | 2 |
@@ -153,7 +154,6 @@ copies it -- never an older copy.
 | `v_bank_matched_statement` | view | `630_bank_reconciliation.sql` | 1 |
 | `v_bulk_sales_below_cost` | view | `130_depot_and_transfers.sql` | 1 |
 | `v_cash_up_position` | view | `060_money_ledger.sql` | 1 |
-| `v_credit_ageing` | view | `060_money_ledger.sql` | 1 |
 | `v_cumulative_stock_loss` | view | `100_directors_and_losses.sql` | 1 |
 | `v_daily_expense` | view | `110_expenses_and_payables.sql` | 1 |
 | `v_depot_day_activity` | view | `140_depot_day.sql` | 1 |
