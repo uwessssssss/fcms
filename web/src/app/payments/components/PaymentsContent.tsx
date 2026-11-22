@@ -335,7 +335,7 @@ export default function PaymentsContent() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}>
+      <div className="flex flex-wrap gap-1 p-1 rounded-xl w-fit max-w-full" style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}>
         {[{ key: 'transactions', label: 'Transactions', icon: 'TableCellsIcon' }, { key: 'summary', label: 'Provider Summary', icon: 'ChartBarIcon' }].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as typeof activeTab)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all"

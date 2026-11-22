@@ -213,6 +213,7 @@ jobs:
           cp -r out-phone/shots /tmp/review/phone 2>/dev/null || true
           cp out/report.json /tmp/review/desktop.json 2>/dev/null || true
           cp out-phone/report.json /tmp/review/phone.json 2>/dev/null || true
+          cp out-phone.log /tmp/review/phone.log 2>/dev/null || true
           cp out/REPORT.md out/VALUES.md out/CLOSEFLOW.json out/FLOW.json /tmp/review/ 2>/dev/null || true
           cd /tmp/review
           git init -q -b audit-shots && git add -A
