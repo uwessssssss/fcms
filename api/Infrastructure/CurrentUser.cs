@@ -57,8 +57,12 @@ public sealed class CurrentUser : ICurrentUser
 /// Duplicating it here is a considered trade: the database is the source of
 /// truth and enforces what it can, but an authorisation check that needs a
 /// round trip on every request is a check people eventually cache badly. The
-/// integrity suite asserts the two agree, so drift is caught by a test rather
-/// than by a supervisor who cannot close a shift.
+/// two must agree, and tools/dbrun/permissions.py checks that they do (CI and
+/// check-all), so drift is caught by a test rather than by a supervisor who
+/// cannot close a shift. (This comment once claimed such a test; none existed,
+/// and HEAD_OFFICE was missing here -- head office was refused almost every
+/// screen until the first full-stack run found it. Nov 2026.) The map below is
+/// generated: python3 tools/dbrun/permissions.py DB --write.
 ///
 /// ATTENDANT appears nowhere. Attendants do not sign in, so they hold no
 /// permissions at all.
@@ -67,78 +71,56 @@ public static class RolePermissions
 {
     private static readonly Dictionary<string, HashSet<string>> Map = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["SUPERVISOR"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            // The forecourt. Everything between the canopy and the office.
-            "shift.open", "shift.close", "assignment.manage",
-            "reading.record", "dip.record", "pump_test.record",
-            "cashup.declare", "credit_sale.record",
-            "delivery.receive", "dry_sale.record",
-            // Counting the shelf and receiving what filled it is ordinary
-            // forecourt work. Needing a manager for it means fetching one on a
-            // Tuesday afternoon.
-            "dry_stock.manage", "stock_count.conduct",
-            // Answering an exception the system raised on their own shift.
-            "exception.resolve",
-        },
-        ["MANAGER"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            // A MANAGER IS A SUPERVISOR AND MORE.
-            //
-            // They cover a shift when a supervisor is away, and a system that
-            // will not let them is a system that gets shared passwords. So
-            // every forecourt permission is repeated here deliberately, and
-            // 200_supervisor_manager.sql enforces the relationship in the
-            // database so the two cannot drift apart.
-            "shift.open", "shift.close", "assignment.manage",
-            "reading.record", "dip.record", "pump_test.record",
-            "cashup.declare", "credit_sale.record",
-            "delivery.receive", "dry_sale.record",
-            "dry_stock.manage", "stock_count.conduct", "exception.resolve",
-
-            // Oversight: signing off work somebody else did. The segregation
-            // constraint still refuses an approval by whoever closed the
-            // shift, so covering a shift does not let them sign off their own.
-            "shift.approve", "cashup.approve", "delivery.approve",
-            "shortage.approve", "stock_count.approve",
-
-            // Overall sight. A manager who cannot open a report manages from a
-            // week-old spreadsheet somebody else printed.
-            "report.view",
-
-            // Taking the cash to the bank. This is the job.
-            "banking.record",
-
-            // The customer side, which at a station is most of marketing.
-            "credit_customer.manage", "credit_payment.record",
-
-            // Setting the price and authorising a discount.
-            "price.execute", "discount.authorise",
-        },
+        // Generated from role_permission by tools/dbrun/permissions.py --write;
+        // CI fails if the two differ.
         ["ACCOUNTANT"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            "shift.approve", "cashup.approve", "banking.record",
-            "credit_payment.record", "shortage.approve", "shortage.write_off",
-            "stock_count.approve", "stock_count.post", "report.view",
-            "exception.resolve"
-        },
-        ["AUDITOR"] = new(StringComparer.OrdinalIgnoreCase) { "report.view", "audit.view" },
-
-        // A director owns the business: reads everything, signs off the big
-        // numbers, never touches a forecourt screen. Deliberately distinct from
-        // ADMIN, which is configuration and has no business seeing money.
-        ["DIRECTOR"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "report.view", "audit.view", "shift.approve", "cashup.approve",
-            "shortage.approve", "shortage.write_off", "stock_count.approve",
-            "price.execute", "discount.authorise", "credit_customer.manage",
-            "exception.resolve"
+            "banking.record", "cashup.approve", "credit_payment.record", "exception.resolve",
+            "report.view", "shortage.approve", "shortage.write_off", "stock_count.approve",
+            "stock_count.post"
         },
         ["ADMIN"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            "staff.manage", "equipment.manage", "site.configure", "policy.configure",
-            "payment_channel.manage", "session.revoke", "report.view"
-        }
+            "equipment.manage", "payment_channel.manage", "policy.configure", "report.view",
+            "session.revoke", "site.configure", "staff.manage"
+        },
+        ["AUDITOR"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "audit.view", "report.view"
+        },
+        ["DIRECTOR"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "audit.view", "cashup.approve", "credit_customer.manage", "discount.authorise",
+            "exception.resolve", "price.execute", "report.view", "shortage.approve",
+            "shortage.write_off", "stock_count.approve"
+        },
+        ["HEAD_OFFICE"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "assignment.manage", "banking.record", "cashup.approve", "cashup.declare",
+            "credit_customer.manage", "credit_payment.record", "credit_sale.record",
+            "delivery.approve", "delivery.receive", "dip.record", "discount.authorise",
+            "dry_sale.record", "dry_stock.manage", "equipment.manage", "exception.resolve",
+            "policy.configure", "price.execute", "pump_test.record", "reading.record",
+            "report.view", "session.revoke", "shift.approve", "shift.close", "shift.open",
+            "shortage.approve", "staff.manage", "stock_count.approve", "stock_count.conduct"
+        },
+        ["MANAGER"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "assignment.manage", "banking.record", "cashup.approve", "cashup.declare",
+            "credit_customer.manage", "credit_payment.record", "credit_sale.record",
+            "delivery.approve", "delivery.receive", "dip.record", "discount.authorise",
+            "dry_sale.record", "dry_stock.manage", "exception.resolve", "price.execute",
+            "pump_test.record", "reading.record", "report.view", "shift.approve",
+            "shift.close", "shift.open", "shortage.approve", "staff.manage",
+            "stock_count.approve", "stock_count.conduct"
+        },
+        ["SUPERVISOR"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "assignment.manage", "cashup.declare", "credit_sale.record", "delivery.receive",
+            "dip.record", "dry_sale.record", "dry_stock.manage", "exception.resolve",
+            "pump_test.record", "reading.record", "shift.close", "shift.open",
+            "stock_count.conduct"
+        },
     };
 
     /// <summary>

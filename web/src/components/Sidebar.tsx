@@ -20,6 +20,8 @@ export interface NavItem {
   systemAdminOnly?: boolean;
   /** Shown only to a company that runs a depot. */
   needsDepot?: boolean;
+  /** A permission the screen's data needs; not offered without it. */
+  needs?: string;
 }
 
 export const navItems: NavItem[] = [
@@ -27,26 +29,26 @@ export const navItems: NavItem[] = [
   { key: 'nav-site-ops', label: 'Site Operations', icon: 'BuildingStorefrontIcon', href: '/site-operations-detail', group: 'Monitor' },
   { key: 'nav-alerts', label: 'Alerts', icon: 'BellAlertIcon', href: '/shift-operations', group: 'Monitor' },
   { key: 'nav-tanks', label: 'Tank Inventory', icon: 'BeakerIcon', href: '/inventory/tanks', group: 'Inventory' },
-  { key: 'nav-deliveries', label: 'Fuel Deliveries', icon: 'TruckIcon', href: '/inventory/deliveries', group: 'Inventory' },
+  { key: 'nav-deliveries', label: 'Fuel Deliveries', icon: 'TruckIcon', href: '/inventory/deliveries', group: 'Inventory', needs: 'report.view' },
   { key: 'nav-other-stocks', label: 'Other Stocks', icon: 'ArchiveBoxIcon', href: '/other-stocks', group: 'Inventory' },
-  { key: 'nav-products', label: 'Products', icon: 'TagIcon', href: '/products', group: 'Inventory' },
+  { key: 'nav-products', label: 'Products', icon: 'TagIcon', href: '/products', group: 'Inventory', needs: 'report.view' },
   { key: 'nav-stock-counts', label: 'Stock Counts', icon: 'ClipboardDocumentCheckIcon', href: '/stock-counts', group: 'Inventory' },
   { key: 'nav-pump-setup', label: 'Pump Setup', icon: 'CpuChipIcon', href: '/pump-setup', group: 'Pumps' },
   { key: 'nav-pump-attendants', label: 'Pump Attendants', icon: 'UsersIcon', href: '/pump-attendants', group: 'Pumps' },
-  { key: 'nav-attendant-shorts', label: 'Attendant Shorts', icon: 'ExclamationTriangleIcon', href: '/attendant-shorts', group: 'Pumps' },
+  { key: 'nav-attendant-shorts', label: 'Attendant Shorts', icon: 'ExclamationTriangleIcon', href: '/attendant-shorts', group: 'Pumps', needs: 'report.view' },
     { key: 'nav-shift-operations', label: 'Shift Operations', icon: 'PlayCircleIcon', href: '/shift-operations', group: 'Operations' },
 { key: 'nav-shift-closure', label: 'Shift Closure', icon: 'ClipboardDocumentCheckIcon', href: '/shift-closure', group: 'Operations' },
   { key: 'nav-shift-reports', label: 'Shift Reports', icon: 'DocumentChartBarIcon', href: '/shift-closure/reports', group: 'Operations' },
-  { key: 'nav-expenses', label: 'Expenses', icon: 'ReceiptRefundIcon', href: '/expenses', group: 'Operations' },
-  { key: 'nav-suppliers', label: 'Suppliers', icon: 'TruckIcon', href: '/suppliers', group: 'Operations' },
+  { key: 'nav-expenses', label: 'Expenses', icon: 'ReceiptRefundIcon', href: '/expenses', group: 'Operations', needs: 'report.view' },
+  { key: 'nav-suppliers', label: 'Suppliers', icon: 'TruckIcon', href: '/suppliers', group: 'Operations', needs: 'report.view' },
   { key: 'nav-credit', label: 'Credit Customers', icon: 'UserGroupIcon', href: '/credit-customers', group: 'Operations' },
-  { key: 'nav-payments', label: 'Mobile Money & Visa', icon: 'DevicePhoneMobileIcon', href: '/payments', group: 'Operations' },
-  { key: 'nav-other-income', label: 'Other Income', icon: 'SparklesIcon', href: '/other-income', group: 'Operations' },
+  { key: 'nav-payments', label: 'Mobile Money & Visa', icon: 'DevicePhoneMobileIcon', href: '/payments', group: 'Operations', needs: 'report.view' },
+  { key: 'nav-other-income', label: 'Other Income', icon: 'SparklesIcon', href: '/other-income', group: 'Operations', needs: 'report.view' },
   { key: 'nav-depot', label: 'Depot', icon: 'BuildingOffice2Icon', href: '/depot', group: 'Depot', needsDepot: true },
-  { key: 'nav-books', label: 'Books & Reconciliations', icon: 'BookOpenIcon', href: '/books', group: 'Reports' },
-  { key: 'nav-full-reports', label: 'All Reports', icon: 'ChartBarSquareIcon', href: '/full-reports', group: 'Reports' },
-  { key: 'nav-losses', label: 'Losses', icon: 'ArrowTrendingDownIcon', href: '/losses', group: 'Reports' },
-  { key: 'nav-management', label: 'Management Reports', icon: 'PresentationChartLineIcon', href: '/management-reports', group: 'Reports' },
+  { key: 'nav-books', label: 'Books & Reconciliations', icon: 'BookOpenIcon', href: '/books', group: 'Reports', needs: 'report.view' },
+  { key: 'nav-full-reports', label: 'All Reports', icon: 'ChartBarSquareIcon', href: '/full-reports', group: 'Reports', needs: 'report.view' },
+  { key: 'nav-losses', label: 'Losses', icon: 'ArrowTrendingDownIcon', href: '/losses', group: 'Reports', needs: 'report.view' },
+  { key: 'nav-management', label: 'Management Reports', icon: 'PresentationChartLineIcon', href: '/management-reports', group: 'Reports', needs: 'report.view' },
   { key: 'nav-sales', label: 'Sales Reports', icon: 'ChartBarIcon', href: '/reports', group: 'Reports', headOfficeOnly: true },
   // Above a company, not inside one. The endpoint refuses anybody but a system
   // administrator, so this is a courtesy -- a link that 403s is a worse
@@ -84,6 +86,10 @@ export function useVisibleNav(): NavItem[] {
     if (n.systemAdminOnly && user?.role !== 'system-admin') return false;
     // Most companies have no depot: the menu appears once one is set up.
     if (n.needsDepot && hasDepot !== true) return false;
+    // A screen whose data the person may not read is not offered: a supervisor
+    // was shown 13 menu items that each opened onto a refusal. (D4) A session
+    // saved before permissions were kept shows everything, as before.
+    if (n.needs && user?.permissions && !user.permissions.includes(n.needs)) return false;
     return true;
   });
 }

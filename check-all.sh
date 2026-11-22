@@ -22,6 +22,7 @@ step "1 database: fresh, migrate, 101 tests" bash -c '
   cd db && PGDATABASE=fcms_check ./migrate.sh test'
 step "1b every API statement prepares"      python3 tools/dbrun/prepare_all.py fcms_check
 step "1c every query fills its class"        python3 tools/dbrun/columns.py fcms_check
+step "1c2 API permissions = the database's" python3 tools/dbrun/permissions.py fcms_check
 step "1d demo data + business scenarios"     bash -c '
   cd db && for f in one_station depot demo_day; do
     psql -d fcms_check -v ON_ERROR_STOP=1 -q -f seed/$f.sql >/dev/null || exit 1

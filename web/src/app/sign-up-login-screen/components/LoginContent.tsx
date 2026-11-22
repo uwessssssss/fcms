@@ -83,6 +83,7 @@ export default function LoginContent() {
           .toUpperCase(),
         scope: ['DIRECTOR', 'SYSTEM_ADMIN', 'HEAD_OFFICE'].includes(res.role) ? 'All sites' : 'This site',
         scopeDetail: res.permissions.length + ' permissions',
+        permissions: res.permissions,
         // A director sees every site; everyone else is scoped to theirs. The
         // server enforces this with row-level security regardless -- this only
         // decides what the interface offers.

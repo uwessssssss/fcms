@@ -41,6 +41,7 @@ jobs:
         run: |
           python3 tools/dbrun/prepare_all.py fcms_check
           python3 tools/dbrun/columns.py fcms_check
+          python3 tools/dbrun/permissions.py fcms_check
       - name: Demo data and business scenarios
         run: |
           cd db

@@ -26,6 +26,8 @@ export interface AuthUser {
   assignedSite: string | null;
   /** That site's id, for calls to the API. */
   assignedSiteId?: string | null;
+  /** What the server lets this person do (sign-in and /api/auth/me). */
+  permissions?: string[];
   /** Who is signed in, for defaults such as the witness to a cash drop. */
   staffId?: string;
 }
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: me.name,
           scope: wide ? 'All sites' : 'This site',
           scopeDetail: me.permissions.length + ' permissions',
+          permissions: me.permissions,
           assignedSiteId: wide ? null : me.siteId,
           // keep the name already looked up while the station is the same
           assignedSite: wide ? null : (base.assignedSiteId === me.siteId ? base.assignedSite : null),

@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import BankReconciliationTab from './BankReconciliation';
+import { useAuth } from '@/context/AuthContext';
 import type {
   AccountRow, BalanceSheet, ControlRow, JournalRow, JournalLineRow, LedgerLine,
   ProfitAndLoss, ReceivableRow, TrialBalanceRow,
@@ -586,7 +587,12 @@ function Ledger({ accounts, code, setCode }: { accounts: AccountRow[]; code: str
 
 // ---------------------------------------------------------------------------
 export default function BooksContent() {
-  const [tab, setTab] = useState<Tab>('recs');
+  // The company-wide controls are head office's (the API refuses a station);
+  // a station's books open on its trial balance instead of on a refusal. (D4)
+  const { user } = useAuth();
+  const companyWide = !user || ['head-office', 'system-admin', 'director'].includes(user.role);
+  const tabs = companyWide ? TABS : TABS.filter(([k]) => k !== 'recs');
+  const [tab, setTab] = useState<Tab>(companyWide ? 'recs' : 'tb');
   const [code, setCode] = useState('');
   const { data: accounts } = useLoad<AccountRow[]>('/api/books/accounts', () => api.get<AccountRow[]>('/api/books/accounts'));
   return (
@@ -599,7 +605,7 @@ export default function BooksContent() {
         </p>
       </div>
       <div className="flex flex-wrap gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
-        {TABS.map(([k, label]) => (
+        {tabs.map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)} className="px-3 py-2 text-xs font-medium -mb-px border-b-2"
                   style={{ borderColor: tab === k ? 'var(--primary)' : 'transparent',
                            color: tab === k ? 'var(--foreground)' : 'var(--muted-foreground)' }}>{label}</button>
