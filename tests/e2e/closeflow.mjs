@@ -78,9 +78,11 @@ try {
   const handReply = page.waitForResponse((r) => r.url().includes('/api/forecourt/handover'), { timeout: 15000 })
     .then(async (r) => `${r.status()} ${(await r.text()).slice(0, 200)}`).catch(() => 'no request was sent');
   await page.getByRole('button', { name: 'Record handover' }).click();
-  const handOk = await toast(/Handover recorded/i);
+  const reply = await handReply;
+  await toast(/Handover recorded/i);
   await shot('3b-handover-result');
-  check('the handover is recorded on both meters', handOk, handOk ? '' : await handReply);
+  const handed = sql(`SELECT count(*) FROM nozzle_assignment WHERE shift_id = '${shiftId}' AND nozzle_id = '${nzA}'`);
+  check('the handover is recorded on both meters', reply.startsWith('200') && handed === '2', `${reply.slice(0, 80)}; ${handed} holdings on the nozzle`);
   await settle();
 
   // ---- close: meters ----------------------------------------------------------
@@ -135,8 +137,15 @@ try {
   // ---- close ----------------------------------------------------------------------
   await page.getByRole('button', { name: 'Close Shift' }).first().click();
   await page.waitForTimeout(500);
-  const confirm = page.getByRole('button', { name: 'Close Shift' }).last();
-  await confirm.click();
+  // The dialog's own button: the page's header button sits under the overlay.
+  const dialog = page.locator('div', { has: page.getByText('Confirm Shift Closure', { exact: true }) }).last();
+  // The dips fell by exactly what the meters let out, handover included, so the
+  // gain/loss the supervisor confirms is about nothing. The screen's own
+  // estimate, blind to the first holder's litres, said -15 L.
+  const glLine = (await dialog.innerText()).match(/Gain\/Loss\s*([+-]?[\d.,]+)/);
+  const gl = glLine ? Number(glLine[1].replace(/,/g, '')) : NaN;
+  check('the confirm shows the server\'s gain/loss, handover included', Math.abs(gl) < 1, glLine ? glLine[0] : 'no gain/loss line');
+  await dialog.getByRole('button', { name: 'Close Shift' }).click();
   await page.waitForTimeout(4000); await settle(); await shot('8-closed');
   const state = sql(`SELECT state FROM shift WHERE id = '${shiftId}'`);
   check('the shift closes from the screen', state === 'DECLARED', state);

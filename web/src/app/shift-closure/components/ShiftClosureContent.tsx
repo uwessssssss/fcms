@@ -465,8 +465,12 @@ export default function ShiftClosureContent() {
     return { grade, elecTotal, dipConsumed, gl, glValue: gl * price };
   });
 
-  const totalGainLoss = dipsPending ? 0 : gradeGainLoss.reduce((s, g) => s + g.gl, 0);
-  const totalGainLossValue = dipsPending ? 0 : gradeGainLoss.reduce((s, g) => s + g.glValue, 0);
+  // The server's variance per tank once checked (every holding, handovers
+  // included); until then the screen's own estimate.
+  const serverGl = preview ? preview.tanks.reduce((t, x) => t + (x.varianceLitres ?? 0), 0) : null;
+  const serverGlValue = preview ? preview.tanks.reduce((t, x) => t + (x.varianceLitres ?? 0) * (prices[x.productCode] ?? 0), 0) : null;
+  const totalGainLoss = serverGl ?? (dipsPending ? 0 : gradeGainLoss.reduce((s, g) => s + g.gl, 0));
+  const totalGainLossValue = serverGlValue ?? (dipsPending ? 0 : gradeGainLoss.reduce((s, g) => s + g.glValue, 0));
 
   // ── Accounting balance check ──
   // What the meters say is owed: each nozzle's MECHANICAL litres, less any
@@ -481,6 +485,10 @@ export default function ShiftClosureContent() {
     (t, n) => t + Math.max(0, n.manualSold - n.rtt) * (prices[n.grade] ?? 0),
     0,
   );
+  // Once checked with the server, its figures: they include litres sold by an
+  // attendant who handed over, which the boxes on this screen (current holders
+  // only) cannot see. The estimate showed UGX 153,600 against 231,150 owed.
+  const expectedShown = preview ? preview.cashUps.reduce((t, c) => t + c.fuelValue, 0) : expectedFromMeters;
   const totalRtt = allNozzles.reduce((t, n) => t + n.rtt, 0);
   const accountingItems = [
     { label: 'Meter readings entered', ok: totalManualSold > 0 },
@@ -497,6 +505,7 @@ export default function ShiftClosureContent() {
 
   // ── Handlers ──
   const updateNozzle = (pumpId: string, nozzleId: string, field: keyof Nozzle, value: number | string) => {
+    setPreview(null);   // a changed meter voids the server's last verdict
     setPumps(prev => prev.map(p => p.id === pumpId
       ? { ...p, nozzles: p.nozzles.map(n => n.id === nozzleId ? { ...n, [field]: value } : n) }
       : p
@@ -509,6 +518,7 @@ export default function ShiftClosureContent() {
 
   const updateTank = (id: string, field: keyof Tank, value: number | null) => {
     setTanks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
+    setPreview(null);   // a changed dip voids the server's last verdict
   };
 
   const addExpense = () => setExpenses(prev => [...prev, { id: `ex${Date.now()}`, description: '', amount: 0, category: 'Other' }]);
@@ -1425,7 +1435,7 @@ export default function ShiftClosureContent() {
               </div>
               <div className="p-5 space-y-3">
                 {[
-                  { label: 'Expected (meters, net of RTT)', value: expectedFromMeters, color: 'var(--foreground)' },
+                  { label: preview ? 'Expected (meters, net of RTT)' : 'Expected so far (check with the server)', value: expectedShown, color: 'var(--foreground)' },
                   { label: 'Actual Cash Counted', value: actualCashCounted, color: 'var(--foreground)' },
                   { label: cashShort >= 0 ? 'Cash Short' : 'Cash Over', value: Math.abs(cashShort), color: cashShort > 0 ? '#ef4444' : '#22c55e' },
                   { label: 'Total Discounts Given', value: totalDiscounts, color: '#f59e0b' },
