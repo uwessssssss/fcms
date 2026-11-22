@@ -676,7 +676,7 @@ export default function FullReportsContent() {
                       <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
                       <td className="text-xs font-semibold text-foreground">{d.site}</td>
                       <td className="font-mono-nums text-xs font-semibold" style={{ color: '#F43F5E' }}>UGX {fmt(d.expenses)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt((d.expenses / d.totalSales) * 100, 1)}%</td>
+                      <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt(d.totalSales ? (d.expenses / d.totalSales) * 100 : 0, 1)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -701,7 +701,7 @@ export default function FullReportsContent() {
                       <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
                       <td className="text-xs font-semibold text-foreground">{d.site}</td>
                       <td className="font-mono-nums text-xs font-semibold" style={{ color: '#A78BFA' }}>UGX {fmt(d.credit)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt((d.credit / d.totalSales) * 100, 1)}%</td>
+                      <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt(d.totalSales ? (d.credit / d.totalSales) * 100 : 0, 1)}%</td>
                     </tr>
                   ))}
                 </tbody>

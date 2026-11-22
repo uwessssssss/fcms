@@ -168,7 +168,7 @@ public sealed class BooksService
             """
             SELECT code AS Code, name AS Name, type::text AS Type, opening AS Opening,
                    debits AS Debits, credits AS Credits, closing AS Closing
-              FROM fn_gl_trial_balance(@from, @to, @site, @tradingOnly)
+              FROM fn_gl_trial_balance(@from::date, @to::date, @site, @tradingOnly)
             """,
             new { from = from.ToDateTime(TimeOnly.MinValue), to = to.ToDateTime(TimeOnly.MinValue), site = s, tradingOnly },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
@@ -218,7 +218,7 @@ public sealed class BooksService
             """
             SELECT posting_date AS PostingDate, event_at AS EventAt, journal_id AS JournalId, source AS Source,
                    memo AS Memo, party AS Party, qty AS Qty, debit AS Debit, credit AS Credit, balance AS Balance
-              FROM fn_gl_account_ledger(@code, @from, @to, @site)
+              FROM fn_gl_account_ledger(@code, @from::date, @to::date, @site)
             """,
             new { code, from = from.ToDateTime(TimeOnly.MinValue), to = to.ToDateTime(TimeOnly.MinValue), site = s },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
@@ -235,7 +235,7 @@ public sealed class BooksService
                    r.difference AS Difference, r.in_open_shifts AS InOpenShifts, r.current_0_30 AS Current0To30, r.days_31_60 AS Days31To60,
                    r.days_61_90 AS Days61To90, r.over_90 AS Over90, r.last_payment AS LastPayment,
                    r.oldest_unpaid AS OldestUnpaid
-              FROM fn_ar_reconciliation(@asOf) r
+              FROM fn_ar_reconciliation(@asOf::date) r
               JOIN credit_customer cc ON cc.id = r.customer_id
              WHERE @site::uuid IS NULL OR cc.site_id = @site
             """,
@@ -253,7 +253,7 @@ public sealed class BooksService
             """
             SELECT control AS Control, detail AS Detail, ledger AS Ledger, record AS Record,
                    difference AS Difference, unit AS Unit, ok AS Ok
-              FROM fn_gl_controls_checked(@asOf)
+              FROM fn_gl_controls_checked(@asOf::date)
             """,
             new { asOf = asOf.ToDateTime(TimeOnly.MinValue) },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
@@ -334,7 +334,7 @@ public sealed class BooksService
         try
         {
             return await conn.ExecuteScalarAsync<Guid>(new CommandDefinition(
-                "SELECT fn_gl_manual_journal(@site, @date, @memo, @lines::jsonb, @actor)",
+                "SELECT fn_gl_manual_journal(@site, @date::date, @memo, @lines::jsonb, @actor)",
                 new { site = s, date = req.Date.ToDateTime(TimeOnly.MinValue), memo = req.Memo, lines, actor = _user.StaffId },
                 transaction: _uow.Transaction, cancellationToken: ct));
         }
@@ -377,7 +377,7 @@ public sealed class BooksService
         try
         {
             await conn.ExecuteAsync(new CommandDefinition(
-                "SELECT fn_gl_close_period(@month, @actor)",
+                "SELECT fn_gl_close_period(@month::date, @actor)",
                 new { month = new DateTime(year, month, 1), actor = _user.StaffId },
                 transaction: _uow.Transaction, cancellationToken: ct));
         }

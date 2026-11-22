@@ -216,7 +216,14 @@ async function browserChecks(browser) {
     for (const route of routes) {
       if (route.startsWith('/sign-up-login-screen') || route === '/change-password') continue;
       await visit(page, log, user, route);
-      if (user === 'HO01' && TABS[route]) for (const tab of TABS[route]) await visit(page, log, user, route, tab);
+      if (user === 'HO01' && TABS[route]) {
+        // No tab at all is the screen having nothing to show (Shift Closure
+        // with no open shift at head office); some missing is a fault.
+        const present = [];
+        for (const t of TABS[route]) if (await page.locator('main').getByText(t, { exact: true }).count()) present.push(t);
+        if (!present.length) { console.log(`note  ${user} ${route}: no tabs shown (nothing open here)`); continue; }
+        for (const tab of TABS[route]) await visit(page, log, user, route, tab);
+      }
     }
     // Sign out
     // On a phone, Sign out is in the drawer: open the menu first.

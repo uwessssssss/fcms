@@ -232,13 +232,13 @@ public sealed class MoneyAccountService
                    not_presented AS NotPresented, statement_only AS StatementOnly, book_balance AS BookBalance,
                    difference AS Difference, unmatched_book AS UnmatchedBook,
                    unmatched_statement AS UnmatchedStatement, stale_book AS StaleBook
-              FROM fn_bank_reconciliation(@account, @asOf)
+              FROM fn_bank_reconciliation(@account, @asOf::date)
             """, new { account = accountId, asOf = day }, transaction: _uow.Transaction, cancellationToken: ct));
         var items = (await conn.QueryAsync<BankRecItem>(new CommandDefinition(
             """
             SELECT side AS Side, id AS Id, on_date AS OnDate, amount AS Amount, description AS Description,
                    reference AS Reference
-              FROM fn_bank_unmatched(@account, @asOf)
+              FROM fn_bank_unmatched(@account, @asOf::date)
              LIMIT 1000
             """, new { account = accountId, asOf = day }, transaction: _uow.Transaction, cancellationToken: ct))).ToList();
         return new BankReconciliation(summary, items);

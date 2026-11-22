@@ -219,7 +219,7 @@ export default function DashboardContent() {
   const totalLitres = sites.reduce((s, x) => s + x.litresDispensed, 0);
   const totalPumps = sites.reduce((s, x) => s + x.pumps.total, 0);
   const activePumps = sites.reduce((s, x) => s + x.pumps.active, 0);
-  const pumpPct = Math.round((activePumps / totalPumps) * 100);
+  const pumpPct = totalPumps ? Math.round((activePumps / totalPumps) * 100) : 0;   // no pumps yet: 0, not NaN
   const criticalTanks = sites.filter((s) => s.lowestTankPct <= 15).length;
   const lowTanks = sites.filter((s) => s.lowestTankPct <= 30).length;
   const openAlerts = alerts.filter((a) => !a.acknowledged).length;
@@ -291,7 +291,7 @@ export default function DashboardContent() {
           featured
           label="Total Revenue Today"
           value={formatCurrency(totalRevenue)}
-          subtext={`Target: ${formatCurrency(totalTarget)} · ${Math.round((totalRevenue / totalTarget) * 100)}% achieved`}
+          subtext={totalTarget > 0 ? `Target: ${formatCurrency(totalTarget)} · ${Math.round((totalRevenue / totalTarget) * 100)}% achieved` : 'No revenue target set'}
           trend={{ value: '+8.4% vs yesterday', direction: 'up', positive: true }}
           icon="CurrencyPoundIcon"
         />
