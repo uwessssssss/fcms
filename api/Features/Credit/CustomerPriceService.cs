@@ -46,6 +46,7 @@ public sealed class CustomerPriceService
     {
         Require(alsoView: true);
         var conn = await _uow.ConnectionAsync(ct);
+        await StationScope.RequireCustomerAsync(conn, _uow, customerId, ct);
         var rows = await conn.QueryAsync<CustomerPriceRow>(new CommandDefinition(
             """
             SELECT cp.id AS Id, cp.product_id AS ProductId, p.code AS Product, cp.price AS Price, cp.margin AS Margin,
@@ -77,6 +78,7 @@ public sealed class CustomerPriceService
                 "Say what the agreement is -- a contract, a volume deal, credit terms.");
 
         var conn = await _uow.ConnectionAsync(ct);
+        await StationScope.RequireCustomerAsync(conn, _uow, customerId, ct);
         try
         {
             // End the agreement in force for this grade, then start the new
@@ -111,6 +113,7 @@ public sealed class CustomerPriceService
     {
         Require();
         var conn = await _uow.ConnectionAsync(ct);
+        await StationScope.RequireCustomerPriceAsync(conn, _uow, agreementId, ct);
         try
         {
             var n = await conn.ExecuteAsync(new CommandDefinition(

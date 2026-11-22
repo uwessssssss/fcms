@@ -163,6 +163,21 @@ check('a system administrator appoints head office, at the head office', r.statu
 r = await person(adm, 'DIRECTOR', site, 8);
 check('nobody can appoint a director', r.status === 422 && r.code === 'NO_DIRECTOR', `${r.status} ${r.code}`);
 
+// ---- each site sees only itself ----------------------------------------------
+const dep = await signIn('DEP01');
+const anyShift = sql(`SELECT s.id FROM shift s JOIN site si ON si.id = s.site_id WHERE si.kind = 'STATION' ORDER BY s.opened_at DESC LIMIT 1`);
+r = await dep.get(`/api/shifts/${anyShift}/activity`);
+check('a depot manager cannot read a station shift', r.status === 403, `${r.status} ${r.code ?? ''}`);
+const year = new Date().getFullYear();
+r = await dep.get(`/api/reports/directors?from=${year - 1}-01-01&to=${year}-12-31`);
+const depName = sql(`SELECT name FROM site WHERE id = '${depot}'`);
+check('the depot manager\'s pack holds only the depot', r.status === 200
+  && (r.data.sites ?? []).every((x) => x.siteName === depName)
+  && !(r.data.awaiting ?? []).some((x) => x.kind === 'Shortage' && x.description.includes('Nabirye')),
+  `${r.status} ${(r.data?.sites ?? []).map((x) => x.siteName).join(', ')}`);
+r = await ho.get(`/api/reports/directors?from=${year - 1}-01-01&to=${year}-12-31`);
+check('head office\'s pack holds every site', r.status === 200 && (r.data.sites ?? []).length >= 2, `${(r.data?.sites ?? []).length} sites`);
+
 fs.mkdirSync('out', { recursive: true });
 fs.writeFileSync('out/FLOW.json', JSON.stringify(results, null, 2));
 const failed = results.filter((x) => !x.ok).length;

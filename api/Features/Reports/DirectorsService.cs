@@ -78,6 +78,9 @@ public sealed class DirectorsService
     public DirectorsService(IUnitOfWork uow, ICurrentUser user, AccountsService accounts)
         => (_uow, _user, _accounts) = (uow, user, accounts);
 
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     public async Task<DirectorsSummary> GetAsync(DateOnly from, DateOnly to,
                                                   CancellationToken ct)
     {
@@ -87,6 +90,10 @@ public sealed class DirectorsService
             throw new DomainException("FORBIDDEN", "This needs report.view.", 403);
 
         var conn = await _uow.ConnectionAsync(ct);
+        // Head office sees the company; everyone else their own site. Only the
+        // statement was scoped, so a depot manager read UGX 0 revenue beside the
+        // station's litres, debtors and staff shortages.
+        Guid? site = CompanyWide.Contains(_user.Role) ? null : _user.SiteId;
 
         // The statement already knows how to compute a bottom line, and there
         // must only ever be one place that does. A second implementation would
@@ -104,10 +111,11 @@ public sealed class DirectorsService
                    END AS MarginPerLitre
               FROM v_site_performance
              WHERE business_date BETWEEN @from AND @to
+               AND (@site::uuid IS NULL OR site_id = @site)
              GROUP BY site_name, site_kind
              ORDER BY SUM(margin) DESC
             """,
-            new { from, to },
+            new { from, to, site },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
         var loss = await conn.QuerySingleAsync<LossHeadline>(new CommandDefinition(
@@ -117,24 +125,32 @@ public sealed class DirectorsService
                    COALESCE(SUM(sold_litres), 0) AS Sold
               FROM v_daily_stock_loss
              WHERE business_date BETWEEN @from AND @to
+               AND (@site::uuid IS NULL OR site_id = @site)
             """,
-            new { from, to },
+            new { from, to, site },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         var money = await conn.QuerySingleAsync<MoneyHeadline>(new CommandDefinition(
             """
             SELECT
-              (SELECT COALESCE(SUM(balance), 0) FROM v_credit_ageing_buckets)     AS Receivables,
-              (SELECT COALESCE(SUM(past_terms), 0) FROM v_credit_ageing_buckets)  AS PastTerms,
+              (SELECT COALESCE(SUM(b.balance), 0) FROM v_credit_ageing_buckets b
+                 JOIN credit_customer c ON c.id = b.customer_id
+                WHERE (@site::uuid IS NULL OR c.site_id = @site))                            AS Receivables,
+              (SELECT COALESCE(SUM(b.past_terms), 0) FROM v_credit_ageing_buckets b
+                 JOIN credit_customer c ON c.id = b.customer_id
+                WHERE (@site::uuid IS NULL OR c.site_id = @site))                            AS PastTerms,
               (SELECT COALESCE(SUM(GREATEST(balance, 0)), 0)
-                 FROM v_supplier_balance)                                         AS Payables,
+                 FROM v_supplier_balance WHERE (@site::uuid IS NULL OR site_id = @site))           AS Payables,
               (SELECT COALESCE(SUM(GREATEST(balance, 0)), 0)
-                 FROM v_supplier_balance WHERE overdue)                           AS Overdue,
-              (SELECT COALESCE(SUM(on_hand), 0) FROM v_cash_position)            AS CashOnHand,
-              (SELECT count(*) FROM exception_flag WHERE resolved_at IS NULL)     AS OpenExceptions,
+                 FROM v_supplier_balance WHERE overdue AND (@site::uuid IS NULL OR site_id = @site)) AS Overdue,
+              (SELECT COALESCE(SUM(on_hand), 0) FROM v_cash_position
+                WHERE (@site::uuid IS NULL OR site_id = @site))                                     AS CashOnHand,
               (SELECT count(*) FROM exception_flag
-                WHERE resolved_at IS NULL AND level = 'CRITICAL')                 AS Critical
+                WHERE resolved_at IS NULL AND (@site::uuid IS NULL OR site_id = @site))             AS OpenExceptions,
+              (SELECT count(*) FROM exception_flag
+                WHERE resolved_at IS NULL AND level = 'CRITICAL' AND (@site::uuid IS NULL OR site_id = @site)) AS Critical
             """,
+            new { site },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         var below = await conn.QuerySingleAsync<BelowCostHeadline>(new CommandDefinition(
@@ -142,8 +158,9 @@ public sealed class DirectorsService
             SELECT count(*)::int AS Loads, COALESCE(SUM(margin), 0) AS Value
               FROM v_bulk_sales_below_cost
              WHERE loaded_at::date BETWEEN @from AND @to
+               AND (@site::uuid IS NULL OR site_id = @site)
             """,
-            new { from, to },
+            new { from, to, site },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         // Everything sitting on a director's desk, oldest first. An approval
@@ -159,19 +176,20 @@ public sealed class DirectorsService
              -- A closed shift waiting for approval is DECLARED. 'CLOSED' is not a
              -- shift state, so this failed every time and the Directors page with it.
              WHERE s.state = 'DECLARED' AND s.approved_by IS NULL
+               AND (@site::uuid IS NULL OR s.site_id = @site)
 
             UNION ALL
             SELECT 'Shortage', st.full_name || ' -- ' || COALESCE(ss.reason, 'no reason given'),
                    ss.amount, ss.created_at,
                    (current_date - ss.created_at::date)::int
               FROM staff_shortage ss JOIN staff st ON st.id = ss.staff_id
-             WHERE ss.approved_by IS NULL
+             WHERE ss.approved_by IS NULL AND (@site::uuid IS NULL OR ss.site_id = @site)
 
             UNION ALL
             SELECT 'Expense', e.description, e.amount, e.recorded_at,
                    (current_date - e.recorded_at::date)::int
               FROM expense e
-             WHERE e.approved_by IS NULL AND e.amount >= 100000
+             WHERE e.approved_by IS NULL AND e.amount >= 100000 AND (@site::uuid IS NULL OR e.site_id = @site)
 
             UNION ALL
             SELECT 'Below cost',
@@ -181,24 +199,31 @@ public sealed class DirectorsService
               FROM bulk_sale bs JOIN credit_customer c ON c.id = bs.customer_id
              WHERE bs.approved_by IS NULL
                AND bs.unit_cost IS NOT NULL AND bs.unit_price < bs.unit_cost
+               AND (@site::uuid IS NULL OR bs.site_id = @site)
 
              ORDER BY 4
              LIMIT 25
             """,
+            new { site },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
         var concentration = (await conn.QueryAsync<ConcentrationRow>(new CommandDefinition(
             """
-            WITH total AS (SELECT NULLIF(SUM(balance), 0) AS t FROM v_credit_ageing_buckets)
+            WITH mine AS (
+              SELECT b.* FROM v_credit_ageing_buckets b
+                JOIN credit_customer c ON c.id = b.customer_id
+               WHERE (@site::uuid IS NULL OR c.site_id = @site)),
+            total AS (SELECT NULLIF(SUM(balance), 0) AS t FROM mine)
             SELECT b.name AS Name, b.balance AS Balance,
                    round(b.balance / (SELECT t FROM total) * 100, 1) AS SharePct,
                    b.oldest_days AS OldestDays,
                    (b.past_terms > 0) AS Overdue
-              FROM v_credit_ageing_buckets b
+              FROM mine b
              WHERE b.balance > 0
              ORDER BY b.balance DESC
              LIMIT 5
             """,
+            new { site },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
         var litres = sites.Sum(s => s.Litres);

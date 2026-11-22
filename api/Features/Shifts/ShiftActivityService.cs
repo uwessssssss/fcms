@@ -1,4 +1,5 @@
 using Dapper;
+using Fcms.Api.Common;
 using Fcms.Api.Infrastructure;
 
 namespace Fcms.Api.Features.Shifts;
@@ -52,12 +53,19 @@ internal sealed class ActivityTotals
 public sealed class ShiftActivityService
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUser _user;
 
-    public ShiftActivityService(IUnitOfWork uow) => _uow = uow;
+    public ShiftActivityService(IUnitOfWork uow, ICurrentUser user) => (_uow, _user) = (uow, user);
 
     public async Task<ShiftActivity> GetAsync(Guid shiftId, CancellationToken ct)
     {
+        // It had no check at all: any signed-in user could read any shift in the
+        // company by its id. Now: someone who works shifts or reads reports, and
+        // only for a station they may see.
+        if (!_user.Can("cashup.declare") && !_user.Can("shift.close") && !_user.Can("report.view"))
+            throw new DomainException("FORBIDDEN", "Shift activity is for supervisors, managers and reports.", 403);
         var conn = await _uow.ConnectionAsync(ct);
+        await StationScope.RequireShiftAsync(conn, _uow, shiftId, ct);
 
         var totals = await conn.QuerySingleAsync<ActivityTotals>(
             new CommandDefinition(

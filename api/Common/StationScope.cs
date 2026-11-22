@@ -27,6 +27,19 @@ public static class StationScope
                                               CancellationToken ct) =>
         Check(conn, uow, "SELECT fn_station_scope_ok(site_id) FROM stock_count WHERE id = @id", countId, ct);
 
+    /// <summary>Refuse if this person may not see the credit customer's station.</summary>
+    public static Task RequireCustomerAsync(NpgsqlConnection conn, IUnitOfWork uow, Guid customerId,
+                                            CancellationToken ct) =>
+        Check(conn, uow, "SELECT fn_station_scope_ok(site_id) FROM credit_customer WHERE id = @id", customerId, ct);
+
+    /// <summary>Refuse if this person may not see the agreed price's customer's station.</summary>
+    public static Task RequireCustomerPriceAsync(NpgsqlConnection conn, IUnitOfWork uow, Guid agreementId,
+                                                 CancellationToken ct) =>
+        Check(conn, uow, """
+            SELECT fn_station_scope_ok(c.site_id) FROM customer_price p
+              JOIN credit_customer c ON c.id = p.customer_id WHERE p.id = @id
+            """, agreementId, ct);
+
     private static async Task Check(NpgsqlConnection conn, IUnitOfWork uow, string sql, Guid id,
                                     CancellationToken ct)
     {
