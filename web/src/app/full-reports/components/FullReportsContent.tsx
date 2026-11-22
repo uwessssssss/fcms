@@ -336,9 +336,12 @@ export default function FullReportsContent() {
         </button>
       </div>
 
-      <div className="flex gap-5">
+      {/* Side by side on a wide screen; on a phone the menu stacks above, its
+          items wrapping as chips -- beside it, the report was squeezed until
+          the page scrolled sideways. */}
+      <div className="flex flex-col lg:flex-row gap-5">
         {/* ── Left: Report Menu ── */}
-        <div className="w-52 shrink-0 space-y-5">
+        <div className="w-full lg:w-52 lg:shrink-0 space-y-3 lg:space-y-5">
           {groups.map(group => {
             const items = reportMenu.filter(r => r.group === group);
             const color = groupColors[group];
@@ -353,14 +356,14 @@ export default function FullReportsContent() {
                     {group}
                   </p>
                 </div>
-                <div className="space-y-0.5">
+                <div className="flex flex-wrap gap-1 lg:block lg:space-y-0.5">
                   {items.map(item => {
                     const isActive = activeReport === item.key;
                     return (
                       <button
                         key={item.key}
                         onClick={() => setActiveReport(item.key)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-left transition-all duration-200"
+                        className="lg:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-left transition-all duration-200"
                         style={
                           isActive
                             ? {
@@ -418,7 +421,7 @@ export default function FullReportsContent() {
                     {SITES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="date"
                     value={dateFrom}

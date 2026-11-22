@@ -255,7 +255,7 @@ async function visit(page, log, user, route, tab) {
         // freeing that one spilled the table and widened the whole phone
         // screenshot. CSS turns a lone overflow-y:visible back into auto, so
         // the vertical one alone does not unclip.
-        if (el.scrollWidth > el.clientWidth + 1) el.style.overflowY = 'visible';
+        if (el.scrollWidth > el.clientWidth + 2) el.style.overflowY = 'visible';
         else el.style.overflow = 'visible';
         el.style.height = 'auto'; el.style.maxHeight = 'none';
       }
@@ -321,7 +321,9 @@ async function browserChecks(browser) {
         for (const tab of TABS[route]) await visit(page, log, user, route, tab);
       }
     }
-    // Sign out
+    // Sign out, from a fresh page: the screenshot unclipping stretched the
+    // drawer and left Sign out below the fold.
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' }); await settle(page);
     // On a phone, Sign out is in the drawer: open the menu first.
     const menu = page.getByLabel('Open the menu');
     if (await menu.isVisible().catch(() => false)) { await menu.click(); await page.waitForTimeout(400); }
