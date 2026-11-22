@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { ApiError, api } from '@/lib/api';
 import type { AgeingRow, CustomerLedgerRow, CustomerView, StatementLineRow } from '@/types/api';
 import { useSites } from '@/lib/useSites';
@@ -110,6 +111,7 @@ const statusConfig = {
 } as const;
 
 export default function CreditCustomersContent() {
+  const can = useCan();
   const [partial, setPartial] = useState<string[]>([]);
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
@@ -378,9 +380,11 @@ export default function CreditCustomersContent() {
             Manage credit accounts, balances and transactions
           </p>
         </div>
-        <button onClick={openAddCustomer} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-          <Icon name="UserPlusIcon" size={15} />Add Customer
-        </button>
+        {can('credit_customer.manage') && (
+          <button onClick={openAddCustomer} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+            <Icon name="UserPlusIcon" size={15} />Add Customer
+          </button>
+        )}
       </div>
 
       {/* KPIs */}
@@ -493,20 +497,20 @@ export default function CreditCustomersContent() {
                           >
                             Prices
                           </button>
-                          <button
+                          {can('credit_payment.record') && (<button
                             onClick={() => setPayFor(c)}
                             title="Record a payment"
                             className="px-2 py-1 mr-1 rounded-lg text-xs font-semibold"
                             style={{ background: 'rgba(0,212,160,0.12)', color: 'var(--primary)' }}
                           >
                             Payment
-                          </button>
-                          <button onClick={() => openEditCustomer(c)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Edit">
+                          </button>)}
+                          {can('credit_customer.manage') && (<button onClick={() => openEditCustomer(c)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Edit">
                             <Icon name="PencilSquareIcon" size={14} style={{ color: 'var(--primary)' } as React.CSSProperties} />
-                          </button>
-                          <button onClick={() => setDeleteTarget(c.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Delete">
+                          </button>)}
+                          {can('credit_customer.manage') && (<button onClick={() => setDeleteTarget(c.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Delete">
                             <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' } as React.CSSProperties} />
-                          </button>
+                          </button>)}
                         </div>
                       </td>
                     </tr>

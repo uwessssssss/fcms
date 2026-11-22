@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { api, ApiError } from '@/lib/api';
 import type { DryItemView } from '@/types/api';
 import { useSites, useSiteOptions } from '@/lib/useSites';
@@ -73,6 +74,7 @@ const EMPTY_ITEM: Omit<StockItem, 'id'> = {
 function fmt(n: number, dec = 0) { return n.toLocaleString('en-UG', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
 export default function OtherStocksContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -341,10 +343,12 @@ export default function OtherStocksContent() {
               : `Lubricants & non-fuel inventory — ${siteOptions.find((x) => x.id === viewSite)?.name ?? (companyWide ? 'the working site in the top bar' : 'this site')}`}
           </p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
-          <Icon name="PlusIcon" size={16} />
-          Add Stock Item
-        </button>
+        {can('dry_stock.manage') && (
+          <button onClick={openAdd} className="btn-primary">
+            <Icon name="PlusIcon" size={16} />
+            Add Stock Item
+          </button>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -418,12 +422,12 @@ export default function OtherStocksContent() {
                     <td className="px-4 py-3 text-xs font-mono-nums font-semibold text-foreground">{item.sellingPrice ? fmt(item.closingStock * item.sellingPrice) : '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Edit">
+                        {can('dry_stock.manage') && (<button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Edit">
                           <Icon name="PencilIcon" size={13} className="text-primary" />
-                        </button>
-                        <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Delete">
+                        </button>)}
+                        {can('dry_stock.manage') && (<button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Delete">
                           <Icon name="TrashIcon" size={13} style={{ color: '#ef4444' }} />
-                        </button>
+                        </button>)}
                       </div>
                     </td>
                   </tr>

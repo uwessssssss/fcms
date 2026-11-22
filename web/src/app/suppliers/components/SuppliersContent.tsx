@@ -1,5 +1,6 @@
 'use client';
 
+import { useCan } from '@/lib/useCan';
 import { businessToday } from '@/lib/dates';
 import { FormProblem, IssueSummary } from '@/components/ui/Issues';
 import { Checker } from '@/lib/checks';
@@ -28,6 +29,7 @@ import type { DeliveryView, ProfitStatement, SupplierBalanceRow } from '@/types/
  * the ledger, not assembled here.
  */
 export default function SuppliersContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -169,7 +171,8 @@ export default function SuppliersContent() {
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))' }}>
-        {/* ── AN INVOICE ── */}
+        {/* ── AN INVOICE ── (only for those the server lets record one) */}
+        {can('banking.record') && (
         <div className="rounded-xl border p-4 space-y-2" style={card}>
           <h2 className="text-sm font-semibold text-foreground">Record an invoice</h2>
           <select className="input-field w-full text-xs" value={inv.supplierId}
@@ -234,9 +237,11 @@ export default function SuppliersContent() {
             Record invoice
           </button>
         </div>
+        )}
 
         {/* ── A PAYMENT ── */}
         <div className="space-y-4">
+          {can('banking.record') && (
           <div className="rounded-xl border p-4 space-y-2" style={card}>
             <h2 className="text-sm font-semibold text-foreground">Pay a supplier</h2>
             <select className="input-field w-full text-xs" value={pay.supplierId} onChange={(e) => setPay({ ...pay, supplierId: e.target.value })}>
@@ -270,7 +275,9 @@ export default function SuppliersContent() {
               Record payment
             </button>
           </div>
+          )}
 
+          {can('equipment.manage') && (
           <div className="rounded-xl border p-4 space-y-2" style={card}>
             {/* SEPARATED ON PURPOSE. Adding a supplier needs head office or admin
                 authority; the accountant who PAYS suppliers cannot CREATE them.
@@ -300,6 +307,7 @@ export default function SuppliersContent() {
               Add supplier
             </button>
           </div>
+          )}
         </div>
       </div>
 

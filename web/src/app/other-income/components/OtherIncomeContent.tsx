@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { api, ApiError } from '@/lib/api';
 import type { IncomeCategoryRow, IncomeRow } from '@/types/api';
 import { useSites } from '@/lib/useSites';
@@ -72,6 +73,7 @@ const EMPTY_ITEM: Omit<IncomeItem, 'id'> = {
 function fmt(n: number, dec = 0) { return n.toLocaleString('en-UG', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
 export default function OtherIncomeContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -314,9 +316,11 @@ export default function OtherIncomeContent() {
           <h1 className="text-2xl font-bold text-foreground">Other Income</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>Carwash, tyre services, mechanical work and other non-fuel revenue</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-          <Icon name="PlusIcon" size={16} />Record Income
-        </button>
+        {can('dry_sale.record') && (
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+            <Icon name="PlusIcon" size={16} />Record Income
+          </button>
+        )}
       </div>
 
       {/* Category Summary Cards */}
@@ -393,12 +397,12 @@ export default function OtherIncomeContent() {
                   <td className="px-4 py-3 text-xs text-foreground">{item.attendant}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Edit" title="Edit">
+                      {can('dry_sale.record') && (<button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Edit" title="Edit">
                         <Icon name="PencilSquareIcon" size={13} style={{ color: 'var(--primary)' } as React.CSSProperties} />
-                      </button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Delete" title="Delete">
+                      </button>)}
+                      {can('dry_sale.record') && (<button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Delete" title="Delete">
                         <Icon name="TrashIcon" size={13} style={{ color: '#ef4444' } as React.CSSProperties} />
-                      </button>
+                      </button>)}
                     </div>
                   </td>
                 </tr>

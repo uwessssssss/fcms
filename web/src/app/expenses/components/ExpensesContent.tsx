@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { useStatement, field, num } from '@/lib/useStatement';
 import { api, ApiError } from '@/lib/api';
 import { downloadCsv } from '@/lib/csv';
@@ -84,6 +85,7 @@ const pmLabel: Record<string, string> = { cash: 'Cash', mobile_money: 'Mobile Mo
 const pmColor: Record<string, string> = { cash: '#22c55e', mobile_money: '#f59e0b', bank: '#3b82f6' };
 
 export default function ExpensesContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -237,9 +239,11 @@ export default function ExpensesContent() {
           <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
             <Icon name="ArrowDownTrayIcon" size={15} />Export
           </button>
-          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-            <Icon name="PlusIcon" size={15} />Add Expense
-          </button>
+          {can('banking.record') && (
+            <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+              <Icon name="PlusIcon" size={15} />Add Expense
+            </button>
+          )}
         </div>
       </div>
 
@@ -330,12 +334,12 @@ export default function ExpensesContent() {
                           Approve
                         </button>
                       )}
-                      <button onClick={() => openEdit(exp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Edit">
+                      {can('banking.record') && (<button onClick={() => openEdit(exp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Edit">
                         <Icon name="PencilSquareIcon" size={14} style={{ color: 'var(--primary)' } as React.CSSProperties} />
-                      </button>
-                      <button onClick={() => setDeleteTarget(exp.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Delete">
+                      </button>)}
+                      {can('banking.record') && (<button onClick={() => setDeleteTarget(exp.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Delete">
                         <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' } as React.CSSProperties} />
-                      </button>
+                      </button>)}
                     </div>
                   </td>
                 </tr>

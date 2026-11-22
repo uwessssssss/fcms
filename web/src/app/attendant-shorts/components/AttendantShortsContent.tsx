@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { useStatement, field, num } from '@/lib/useStatement';
 import { ApiError, api } from '@/lib/api';
 import { useSites } from '@/lib/useSites';
@@ -90,6 +91,7 @@ const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 export default function AttendantShortsContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -242,9 +244,11 @@ export default function AttendantShortsContent() {
           <h1 className="text-2xl font-bold text-foreground">Attendant Shorts</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Track and manage pump attendant cash shortages</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #007A5C 100%)' }}>
-          <Icon name="PlusIcon" size={16} />Record Short
-        </button>
+        {can('shortage.approve') && (
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #007A5C 100%)' }}>
+            <Icon name="PlusIcon" size={16} />Record Short
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -325,7 +329,7 @@ export default function AttendantShortsContent() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      {s.status === 'pending' && (s.outstanding ?? 0) > 0 && s.staffId && (
+                      {can('shortage.approve') && s.status === 'pending' && (s.outstanding ?? 0) > 0 && s.staffId && (
                         <button
                           onClick={() => openRecovery(s)}
                           className="px-2 py-1 rounded-lg text-xs font-semibold"
@@ -334,12 +338,12 @@ export default function AttendantShortsContent() {
                           Recover
                         </button>
                       )}
-                      <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }} aria-label="Edit" title="Edit">
+                      {can('shortage.approve') && (<button onClick={() => openEdit(s)} className="p-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }} aria-label="Edit" title="Edit">
                         <Icon name="PencilIcon" size={14} className="text-foreground" />
-                      </button>
-                      <button onClick={() => handleDelete(s.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }} aria-label="Delete" title="Delete">
+                      </button>)}
+                      {can('shortage.approve') && (<button onClick={() => handleDelete(s.id)} className="p-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }} aria-label="Delete" title="Delete">
                         <Icon name="TrashIcon" size={14} style={{ color: '#ef4444' }} />
-                      </button>
+                      </button>)}
                     </div>
                   </td>
                 </tr>

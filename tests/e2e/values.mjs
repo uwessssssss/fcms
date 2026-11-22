@@ -284,6 +284,30 @@ await settle();
   }
 }
 
+// ---- other roles: what each may see and do --------------------------------
+for (const [who, ip] of [['AUD01', '10.30.0.2'], ['ACC01', '10.30.0.3']]) {
+  const c2 = await browser.newContext({ viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { 'X-Forwarded-For': ip } });
+  const p2 = await c2.newPage();
+  await p2.goto(BASE + '/sign-up-login-screen', { waitUntil: 'domcontentloaded' });
+  await p2.fill('#email', who); await p2.fill('#password', PASSWORD); await p2.click('button[type="submit"]');
+  await p2.waitForURL((u) => !u.pathname.startsWith('/sign-up-login-screen'), { timeout: 20000 });
+  const at = async (route) => { await p2.goto(BASE + route, { waitUntil: 'domcontentloaded' });
+    try { await p2.waitForLoadState('networkidle', { timeout: 15000 }); } catch { /* polls */ } await p2.waitForTimeout(800);
+    return p2.locator('main').innerText(); };
+  if (who === 'AUD01') {
+    check('display', 'Suppliers', 'an auditor is offered no invoice or payment form', !(await at('/suppliers')).includes('Record an invoice'));
+    check('display', 'Users', 'an auditor is offered no Create User', !(await at('/users')).includes('Create User'));
+    check('display', 'Expenses', 'an auditor is offered no Add Expense', !(await at('/expenses')).includes('Add Expense'));
+  } else {
+    const daily = await at('/full-reports');
+    check('display', 'Reports', 'a station accountant\'s daily statement has the month\'s days', !daily.includes('No closed shifts in this period'),
+      daily.includes('No closed shifts in this period') ? 'empty' : '');
+    const depotDebtor = sql(`SELECT c.name FROM credit_customer c JOIN site s ON s.id = c.site_id WHERE s.kind = 'DEPOT' ORDER BY c.name LIMIT 1`);
+    check('display', 'Credit customers', 'a station accountant sees only the station\'s debtors', !(await at('/credit-customers')).includes(depotDebtor), depotDebtor);
+  }
+  await c2.close();
+}
+
 await browser.close();
 const bad = results.filter((r) => !r.ok);
 const md = ['# FCMS -- are the numbers right?', '',

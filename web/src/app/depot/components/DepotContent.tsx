@@ -1,5 +1,6 @@
 'use client';
 
+import { useCan } from '@/lib/useCan';
 import { businessToday } from '@/lib/dates';
 import PartialLoadNotice from '@/components/ui/PartialLoadNotice';
 import { Checker, errorCount, fieldStyle, hasErrors } from '@/lib/checks';
@@ -44,6 +45,7 @@ import type {
  *   as a station close.
  */
 export default function DepotContent() {
+  const can = useCan();
   const [partial, setPartial] = useState<string[]>([]);
   const { showToast } = useToast();
   const today = businessToday();
@@ -255,7 +257,8 @@ export default function DepotContent() {
       </div>
 
       {/* ── THE DAY ── */}
-      {!day && (
+      {/* Only someone the server lets open a day is offered the form. */}
+      {!day && can('shift.open') && (
         <div className="rounded-xl border p-4 space-y-3" style={card}>
           <h2 className="text-sm font-semibold text-foreground">Open the depot day</h2>
           <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>

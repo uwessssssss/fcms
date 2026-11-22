@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { ApiError, api } from '@/lib/api';
 import type { SiteApprovalRow, StaffRow } from '@/types/api';
 import { useAuth } from '@/context/AuthContext';
@@ -95,6 +96,7 @@ function getInitials(name: string) {
 }
 
 export default function UsersContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -339,9 +341,11 @@ export default function UsersContent() {
             Create, manage and control access for all forecourt staff
           </p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-          <Icon name="UserPlusIcon" size={15} />Create User
-        </button>
+        {can('staff.manage') && (
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+            <Icon name="UserPlusIcon" size={15} />Create User
+          </button>
+        )}
       </div>
 
       {/* KPIs */}
@@ -424,10 +428,10 @@ export default function UsersContent() {
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-1 border-t" style={{ borderColor: 'var(--border)' }}>
-                <button onClick={() => openEdit(u)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                {can('staff.manage') && (<button onClick={() => openEdit(u)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
                   <Icon name="PencilSquareIcon" size={13} />Edit
-                </button>
-                {u.role !== 'attendant' && (
+                </button>)}
+                {can('staff.manage') && u.role !== 'attendant' && (
                   <>
                     <button onClick={() => void accessAction(u, 'unlock')} title="Clear a lockout"
                             className="px-2 py-1 mr-1 rounded-lg text-xs" style={{ background: 'var(--muted)', color: 'var(--foreground)' }}>Unlock</button>
@@ -435,13 +439,13 @@ export default function UsersContent() {
                             className="px-2 py-1 mr-1 rounded-lg text-xs" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>Revoke</button>
                   </>
                 )}
-                <button onClick={() => toggleStatus(u)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: u.status === 'active' ? '#f59e0b' : '#22c55e' }}>
+                {can('staff.manage') && (<button onClick={() => toggleStatus(u)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: u.status === 'active' ? '#f59e0b' : '#22c55e' }}>
                   <Icon name={u.status === 'active' ? 'PauseCircleIcon' : 'PlayCircleIcon'} size={13} />
                   {u.status === 'active' ? 'Suspend' : 'Activate'}
-                </button>
-                <button onClick={() => setDeleteTarget(u.id)} className="p-1.5 rounded-lg border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: '#ef4444' }} title="Delete user">
+                </button>)}
+                {can('staff.manage') && (<button onClick={() => setDeleteTarget(u.id)} className="p-1.5 rounded-lg border transition-colors hover:bg-muted" style={{ borderColor: 'var(--border)', color: '#ef4444' }} title="Delete user">
                   <Icon name="TrashIcon" size={14} />
-                </button>
+                </button>)}
               </div>
             </div>
           );

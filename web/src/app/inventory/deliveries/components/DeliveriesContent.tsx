@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { useStatement, field, num } from '@/lib/useStatement';
 import type { ShiftSummary, TankInventoryRow } from '@/types/api';
 import { api, ApiError } from '@/lib/api';
@@ -95,6 +96,7 @@ const EMPTY_DELIVERY: Omit<Delivery, 'id'> = {
 function fmt(n: number, dec = 0) { return n.toLocaleString('en-UG', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
 export default function DeliveriesContent() {
+  const can = useCan();
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
@@ -369,9 +371,11 @@ export default function DeliveriesContent() {
           <h1 className="text-2xl font-bold text-foreground">Fuel Deliveries</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>Record and track all fuel deliveries with dips, cost price and gain/loss</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-          <Icon name="PlusIcon" size={16} />Record Delivery
-        </button>
+        {can('delivery.receive') && (
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+            <Icon name="PlusIcon" size={16} />Record Delivery
+          </button>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -467,12 +471,12 @@ export default function DeliveriesContent() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(d)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Edit" title="Edit">
+                      {can('delivery.receive') && (<button onClick={() => openEdit(d)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Edit" title="Edit">
                         <Icon name="PencilSquareIcon" size={13} style={{ color: 'var(--primary)' } as React.CSSProperties} />
-                      </button>
-                      <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Delete" title="Delete">
+                      </button>)}
+                      {can('delivery.receive') && (<button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Delete" title="Delete">
                         <Icon name="TrashIcon" size={13} style={{ color: '#ef4444' } as React.CSSProperties} />
-                      </button>
+                      </button>)}
                     </div>
                   </td>
                 </tr>
