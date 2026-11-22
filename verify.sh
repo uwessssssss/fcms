@@ -62,7 +62,7 @@ echo "-- web (compiler) --"
 # missed, including a null dereference on the close screen and a field left
 # reading a property that a rename had removed.
 #
-# types/ambient.d.ts stands in for React and Next, which cannot be installed
+# web/offline-types/ambient.d.ts stands in for React and Next, which cannot be installed
 # here. It checks OUR types strictly and approximates the libraries.
 if command -v tsc >/dev/null 2>&1; then
   ( cd web && tsc -p tsconfig.check.json 2>&1 \

@@ -28,7 +28,7 @@
     "noImplicitReturns": true
   },
   "include": [
-    "types/**/*.d.ts",
+    "offline-types/**/*.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
   ]

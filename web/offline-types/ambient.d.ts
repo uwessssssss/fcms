@@ -2,6 +2,11 @@
  * Minimal ambient declarations, so the TypeScript compiler can check THIS
  * codebase without node_modules present.
  *
+ * ONLY for tsconfig.check.json (the offline check). It lived in types/, which
+ * the real tsconfig.json includes, so on a machine WITH node_modules these
+ * loose declarations replaced React's and Next's own and the real type check
+ * and `next build` failed (first CI run, Nov 2026).
+ *
  * WHY THIS EXISTS
  *
  * Every check in tools/ is a regex approximating a compiler. That has been the
