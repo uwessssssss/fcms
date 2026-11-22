@@ -247,5 +247,22 @@ declare module "geist/font/sans" {
 declare module "geist/font/mono" {
   export const GeistMono: { variable: string; className: string };
 }
-declare module "recharts";
+declare module "recharts" {
+  // The tooltip props, loosely; the components, as any.
+  export type TooltipProps<V = unknown, N = unknown> = {
+    active?: boolean;
+    payload?: Array<{ payload?: unknown; value?: V; name?: N }>;
+    label?: unknown;
+  };
+  export const Area: any;
+  export const AreaChart: any;
+  export const Bar: any;
+  export const BarChart: any;
+  export const CartesianGrid: any;
+  export const Cell: any;
+  export const ResponsiveContainer: any;
+  export const Tooltip: any;
+  export const XAxis: any;
+  export const YAxis: any;
+}
 declare module "lucide-react";

@@ -122,7 +122,10 @@ async function watch(page) {
     if (/Failed to load resource/.test(m.text()) && where.startsWith(API)) return;
     log.errors.push('console: ' + m.text().slice(0, 200) + (where ? ` @ ${where.replace(API, '').replace(BASE, '')}` : ''));
   });
-  page.on('requestfailed', (q) => { if (q.url().startsWith(API)) log.failed.push(`${q.method()} ${q.url().replace(API, '')} ${q.failure()?.errorText}`); });
+  page.on('requestfailed', (q) => {
+    // ERR_ABORTED: the test moved on to the next screen mid-request.
+    if (q.url().startsWith(API) && q.failure()?.errorText !== 'net::ERR_ABORTED') log.failed.push(`${q.method()} ${q.url().replace(API, '')} ${q.failure()?.errorText}`);
+  });
   page.on('response', async (res) => {
     if (!res.url().startsWith(API) || res.status() < 400) return;
     let body = ''; try { body = (await res.text()).slice(0, 160); } catch { /* gone */ }
@@ -250,7 +253,8 @@ async function passwordChange(browser) {
     await page.waitForTimeout(3000);
     const after = new URL(page.url()).pathname.replace(/\/$/, '') || '/';
     const msg = (await page.locator('body').innerText()).match(/[^\n]*(password|characters|same)[^\n]*/i)?.[0] || '';
-    check('password', 'Set my password goes on to the dashboard', after === '/', `${after} ${after === '/' ? '' : msg}`);
+    // A supervisor's home is their site; head office's the dashboard.
+    check('password', 'Set my password goes on to the home screen', ['/', '/site-operations-detail'].includes(after), `${after} ${msg}`);
     await page.screenshot({ path: path.join(OUT, 'shots/03-change-password-done.png'), fullPage: true });
     if (!SKIP_API) {
       const pip = nextIp();
