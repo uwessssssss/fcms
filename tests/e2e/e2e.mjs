@@ -207,10 +207,43 @@ async function visit(page, log, user, route, tab) {
   }
   const landed = new URL(page.url()).pathname;
   if (!tab && landed.startsWith('/sign-up-login-screen')) issues.push('sent back to sign-in');
+  // What the screen SHOWS, not only whether it crashed: leaked code values,
+  // a page wider than the window, clipped labels, a table with headings and
+  // no rows and nothing saying so, invented placeholder data.
+  const display = await page.evaluate(() => {
+    const out = [];
+    const main = document.querySelector('main') || document.body;
+    const txt = main.innerText || '';
+    for (const [re, what] of [[/\bundefined\b/, 'undefined'], [/\bnull\b/, 'null'], [/UGX\s*(?:NaN|-?\s*$)/m, 'UGX without a number'],
+      [/Kampala Central|Nairobi West|Dar es Salaam|Juba North|Mombasa Road|Lorem|John Doe|TODO|lorem ipsum/i, 'placeholder data']]) {
+      const m = txt.match(re); if (m) out.push(`${what}: "${txt.slice(Math.max(0, m.index - 30), m.index + 30).replace(/\s+/g, ' ')}"`);
+    }
+    const vw = window.innerWidth;
+    if (document.documentElement.scrollWidth > vw + 2) out.push(`page ${document.documentElement.scrollWidth}px wide in a ${vw}px window`);
+    let clipped = 0; const eg = [];
+    for (const el of main.querySelectorAll('span,td,th,p,label,button,div')) {
+      if (el.children.length || !el.textContent.trim()) continue;
+      const cs = getComputedStyle(el);
+      if ((cs.overflow === 'hidden' || cs.textOverflow === 'ellipsis' || cs.overflowX === 'hidden') && el.scrollWidth > el.clientWidth + 1) {
+        clipped++; if (eg.length < 3) eg.push(el.textContent.trim().slice(0, 30));
+      }
+    }
+    if (clipped) out.push(`${clipped} label(s) cut off, e.g. ${eg.map((x) => `"${x}"`).join(', ')}`);
+    for (const t of main.querySelectorAll('table')) {
+      const head = t.querySelector('thead th'); const rows = t.querySelectorAll('tbody tr');
+      if (head && rows.length === 0) {
+        const near = (t.parentElement?.parentElement?.innerText || '').toLowerCase();
+        if (!/no |nothing|none|empty|not yet|loading/.test(near.replace(t.innerText.toLowerCase(), ''))) out.push(`an empty table ("${head.textContent.trim()}"...) with nothing saying why`);
+      }
+    }
+    const bare = [...main.querySelectorAll('button')].filter((b) => !b.textContent.trim() && !b.getAttribute('aria-label') && !b.getAttribute('title')).length;
+    if (bare) out.push(`${bare} button(s) with no label`);
+    return out;
+  }).catch(() => []);
   const shot = `shots/${safe(user)}__${safe(route)}${tab ? '__' + safe(tab) : ''}.png`;
   await page.screenshot({ path: path.join(OUT, shot), fullPage: true }).catch(() => {});
-  pages.push({ user, route, tab: tab || '', ok: issues.length === 0, issues, forbidden, shot });
-  console.log(`${issues.length ? 'ISSUE' : 'ok   '} ${user} ${route}${tab ? ' > ' + tab : ''}${issues.length ? ' :: ' + issues.slice(0, 2).join(' | ') : ''}${forbidden.length ? ' [refused: ' + [...new Set(forbidden)].join(', ') + ']' : ''}`);
+  pages.push({ user, route, tab: tab || '', ok: issues.length === 0, issues, forbidden, display, shot });
+  console.log(`${issues.length ? 'ISSUE' : 'ok   '} ${user} ${route}${tab ? ' > ' + tab : ''}${issues.length ? ' :: ' + issues.slice(0, 2).join(' | ') : ''}${forbidden.length ? ' [refused: ' + [...new Set(forbidden)].join(', ') + ']' : ''}${display.length ? ' {display: ' + display.join(' | ') + '}' : ''}`);
 }
 
 async function browserChecks(browser) {
@@ -352,11 +385,13 @@ const md = [
   ...(faults.length ? faults.map((f) => `- \`${f.call}\` -> ${f.type} (${f.file}): **${f.missing.join(', ')}**`) : ['None.']), '',
   '## Screens with issues', '',
   ...(badPages.length ? badPages.map((p) => `- **${p.user} ${p.route}${p.tab ? ' > ' + p.tab : ''}**: ${p.issues.map((i) => i.replace(/\|/g, '/')).join('; ')}`) : ['None.']), '',
+  '## What the screens show (display review)', '',
+  ...(pages.some((p) => p.display?.length) ? pages.filter((p) => p.display?.length).map((p) => `- ${p.user} ${p.route}${p.tab ? ' > ' + p.tab : ''}: ${p.display.join('; ').replace(/\|/g, '/')}`) : ['Nothing found.']), '',
   '## Refused by role (403), for information', '',
   ...[...new Set(pages.flatMap((p) => p.forbidden.map((f) => `${p.user}: ${f}`)))].map((f) => `- ${f}`), '',
   '## Every screen', '', '| User | Screen | Result |', '|---|---|---|',
   ...pages.map((p) => `| ${p.user} | ${p.route}${p.tab ? ' > ' + p.tab : ''} | ${p.ok ? 'clean' : 'ISSUES'} |`),
 ].join('\n');
 fs.writeFileSync(path.join(OUT, 'REPORT.md'), md);
-console.log(`\n${checks.length - badChecks.length}/${checks.length} checks, ${pages.length - badPages.length}/${pages.length} screens clean`);
+console.log(`\n${checks.length - badChecks.length}/${checks.length} checks, ${pages.length - badPages.length}/${pages.length} screens clean, ${pages.filter((p) => p.display?.length).length} with display findings`);
 process.exit(badChecks.length || badPages.length ? 1 : 0);

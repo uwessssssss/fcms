@@ -113,6 +113,8 @@ jobs:
   # the web app, and a browser signing in as every role and opening every
   # screen. Screenshots and the report are the job's artifact.
   e2e:
+    permissions:
+      contents: write   # pushes the screenshots branch
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     services:
@@ -189,12 +191,31 @@ jobs:
           node contracts.cjs ../../web > contracts.json
           set +e
           node e2e.mjs;    screens=$?
+          # the same screens at phone width, for two roles (reviewed, not gated)
+          OUT=out-phone VIEWPORT=390x844 USERS=HO01,SUP01 node e2e.mjs > out-phone.log 2>&1 || true
           node values.mjs; values=$?
           # last: it closes a shift and appoints people in the demo
           node flow.mjs;   flow=$?
           # the shift it closed, recomputed from its readings with the rest
           psql -d fcms -X -q -v ON_ERROR_STOP=1 -f ../../tools/audit/shift_math.sql | grep "SHIFT MATH"; audit=${PIPESTATUS[0]}
           exit $(( screens || values || flow || audit ))
+
+      - name: Publish the screenshots for review (demo data only)
+        if: always() && github.event_name == 'push'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf /tmp/review && mkdir -p /tmp/review
+          cd tests/e2e
+          cp -r out/shots /tmp/review/desktop 2>/dev/null || true
+          cp -r out-phone/shots /tmp/review/phone 2>/dev/null || true
+          cp out/report.json /tmp/review/desktop.json 2>/dev/null || true
+          cp out-phone/report.json /tmp/review/phone.json 2>/dev/null || true
+          cp out/REPORT.md out/VALUES.md /tmp/review/ 2>/dev/null || true
+          cd /tmp/review
+          git init -q -b audit-shots && git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "screens at ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" audit-shots
 
       - name: Report
         if: always()
