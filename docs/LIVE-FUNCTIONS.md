@@ -8,7 +8,7 @@ copies it -- never an older copy.
 
 | name | kind | live in | times written |
 |---|---|---|---|
-| `fn_close_shift` | function | `700_returns_booked_once.sql` | 13 |
+| `fn_close_shift` | function | `730_close_everything_in.sql` | 14 |
 | `fn_close_depot_day` | function | `720_depot_day_local_date.sql` | 4 |
 | `v_site_performance` | view | `720_depot_day_local_date.sql` | 4 |
 | `fn_gl_controls_checked` | function | `690_station_records.sql` | 3 |
@@ -139,6 +139,7 @@ copies it -- never an older copy.
 | `trg_head_office_does_not_trade` | function | `240_org_rules.sql` | 1 |
 | `trg_manager_covers_supervisor` | function | `200_supervisor_manager.sql` | 1 |
 | `trg_meter_event_classified` | function | `050_fuel_ledger.sql` | 1 |
+| `trg_meter_reading_both_heads` | function | `730_close_everything_in.sql` | 1 |
 | `trg_money_scope` | function | `660_money_scope.sql` | 1 |
 | `trg_nozzle_site_matches` | function | `010_foundation.sql` | 1 |
 | `trg_nozzle_wiring_frozen` | function | `340_equipment_wiring_frozen.sql` | 1 |

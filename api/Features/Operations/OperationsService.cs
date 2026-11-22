@@ -189,7 +189,8 @@ public sealed class OperationsService
                         volume_totalizer = r.VolumeTotalizer,
                         electronic_totalizer = r.ElectronicTotalizer,
                         is_rollover = r.IsRollover,
-                        photo_url = r.PhotoUrl
+                        photo_url = r.PhotoUrl,
+                        difference_reason = r.DifferenceReason
                     }), Json),
                     dips = JsonSerializer.Serialize(req.Dips.Select(d => new
                     {
@@ -210,7 +211,9 @@ public sealed class OperationsService
                     roster = JsonSerializer.Serialize(req.NextRoster.Select(r => new
                     {
                         nozzle_id = r.NozzleId, attendant_id = r.AttendantId,
-                        volume_totalizer = r.VolumeTotalizer
+                        volume_totalizer = r.VolumeTotalizer,
+                        // (730) left out, the database carries it from the close just made
+                        electronic_totalizer = r.ElectronicTotalizer
                     }), Json)
                 },
                 transaction: _uow.Transaction, cancellationToken: ct));

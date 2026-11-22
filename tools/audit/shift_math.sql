@@ -105,6 +105,32 @@ SELECT 'M4', 'meters', 'nozzle ' || n.code || ' assignment ' || x.assignment_id,
   JOIN nozzle n ON n.id = x.nozzle_id
  WHERE x.prev_close IS NOT NULL AND x.v_open <> x.prev_close;
 
+-- The two meters (730): the electronic head's litres match the manual meter's
+-- to within the policy's litres, or the close carries a CRITICAL flag with its
+-- reason. Holdings opened before 730 (no electronic opening) are only counted.
+INSERT INTO audit_count
+SELECT 'M5', 'meters', count(*), 'electronic litres = manual litres, to within the tolerance -- or flagged with a reason'
+  FROM meter_event me JOIN s_closed s ON s.id = me.shift_id;
+INSERT INTO audit
+SELECT 'M5', 'meters', 'meter event ' || me.id, round(cl.electronic_totalizer - op.electronic_totalizer, 3), me.gross_litres,
+       'electronic vs manual litres, ' || round(cl.electronic_totalizer - op.electronic_totalizer - me.gross_litres, 3) || ' L apart'
+  FROM meter_event me JOIN s_closed s ON s.id = me.shift_id
+  JOIN meter_reading op ON op.id = me.opening_reading_id
+  JOIN meter_reading cl ON cl.id = me.closing_reading_id
+  JOIN tenant_policy p ON p.tenant_id = s.tenant_id
+ WHERE op.electronic_totalizer IS NOT NULL AND cl.electronic_totalizer IS NOT NULL
+   AND abs(cl.electronic_totalizer - op.electronic_totalizer - me.gross_litres) > p.meter_pair_tolerance_litres
+   AND NOT EXISTS (SELECT 1 FROM exception_flag ef WHERE ef.shift_id = me.shift_id AND ef.code = 'METER_DIVERGENCE'
+                    AND ef.level = 'CRITICAL' AND ef.entity_id = me.id::text AND COALESCE(ef.detail->>'reason', '') <> '');
+INSERT INTO audit
+SELECT 'M5', 'meters', 'meter event ' || me.id, NULL, NULL, 'recorded electronic difference disagrees with its readings'
+  FROM meter_event me JOIN s_closed s ON s.id = me.shift_id
+  JOIN meter_reading op ON op.id = me.opening_reading_id
+  JOIN meter_reading cl ON cl.id = me.closing_reading_id
+ WHERE me.electronic_litres IS DISTINCT FROM
+       CASE WHEN op.electronic_totalizer IS NOT NULL AND cl.electronic_totalizer IS NOT NULL
+            THEN cl.electronic_totalizer - op.electronic_totalizer END;
+
 -- ---------------------------------------------------------------------------
 -- 2. EVERY LITRE CLASSIFIED
 -- ---------------------------------------------------------------------------

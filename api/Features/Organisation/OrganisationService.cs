@@ -52,8 +52,16 @@ public record CreateSite(
 public record AddDepot(string Code, string Name, string? Address);
 
 /// <summary>A person, with the role they will hold.</summary>
+/// <param name="SiteId">The station or depot, for a station role. Head office
+/// and auditors always belong to the head office, whatever is sent; a
+/// station's own people appoint to their station.</param>
+/// <param name="EmployeeNo">Their sign-in name, unique in the company.</param>
+/// <param name="FullName">As on their ID.</param>
+/// <param name="Role">ATTENDANT, SUPERVISOR, MANAGER, ACCOUNTANT, AUDITOR or HEAD_OFFICE.</param>
+/// <param name="Phone">Optional.</param>
+/// <param name="HiredOn">Optional.</param>
 public record CreatePerson(
-    Guid SiteId, string EmployeeNo, string FullName, string Role,
+    Guid? SiteId, string EmployeeNo, string FullName, string Role,
     string? Phone, DateOnly? HiredOn);
 
 // ---------------------------------------------------------------------------
@@ -291,18 +299,45 @@ public sealed class OrganisationService
                     : $"Your role cannot appoint a {req.Role.ToLowerInvariant()}.",
                 403);
 
+        // Where the person belongs. The screen sent the signed-in user's own
+        // site, which for head office is none -- so head office could appoint
+        // nobody, and a station manager's choice of site was never read.
+        var role = req.Role.ToUpperInvariant();
+        var here = await conn.QuerySingleAsync<(Guid? HeadOffice, string? MyKind)>(new CommandDefinition(
+            """
+            SELECT t.head_office_id, (SELECT kind::text FROM site WHERE id = @mine)
+              FROM tenant t WHERE t.id = @tenant
+            """,
+            new { tenant = _user.TenantId, mine = _user.SiteId },
+            transaction: _uow.Transaction, cancellationToken: ct));
+        Guid site;
+        if (role is "HEAD_OFFICE" or "AUDITOR")
+            site = here.HeadOffice ?? throw new DomainException("HEAD_OFFICE_REQUIRED",
+                "This company has no head office to appoint them to.", 409);
+        else if (here.MyKind is "STATION" or "DEPOT")
+        {
+            // A station's people appoint to their own station only.
+            if (req.SiteId is Guid asked && asked != _user.SiteId)
+                throw new DomainException("OWN_SITE_ONLY",
+                    "You appoint people to your own station. Head office appoints to the others.", 403);
+            site = _user.SiteId;
+        }
+        else
+            site = req.SiteId ?? throw new DomainException("SITE_REQUIRED",
+                "Choose the station or depot this person works at.", 422);
+
         return await conn.ExecuteScalarAsync<Guid>(new CommandDefinition(
             """
             INSERT INTO staff (tenant_id, site_id, employee_no, full_name,
                                role, phone, hired_on, is_active)
-            VALUES (@tenant, @SiteId, @EmployeeNo, @FullName,
+            VALUES (@tenant, @site, @EmployeeNo, @FullName,
                     @Role::staff_role, @Phone, @HiredOn, true)
             RETURNING id
             """,
             new
             {
-                tenant = _user.TenantId,
-                req.SiteId, req.EmployeeNo, req.FullName,
+                tenant = _user.TenantId, site,
+                req.EmployeeNo, req.FullName,
                 Role = req.Role.ToUpperInvariant(), req.Phone, req.HiredOn,
             },
             transaction: _uow.Transaction, cancellationToken: ct));

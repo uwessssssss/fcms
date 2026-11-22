@@ -44,14 +44,14 @@ VALUES (:'T', :'site', :'shf', :'n1_tank', :'n1_nozzle', 10, 'GENERATOR', :'SUP2
 -- reading is Alice's opening, one number recorded once.
 SELECT :n1_open + 370 AS hand \gset
 INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id, is_opening, source,
-                           volume_totalizer, evidence, recorded_by, captured_at, is_rollover)
-VALUES (:'T', :'site', :'n1_nozzle', :'shf', :'n1', FALSE, 'MANUAL', :hand, 'PENDING', :'SUP2', :'t_hand', FALSE);
+                           volume_totalizer, electronic_totalizer, evidence, recorded_by, captured_at, is_rollover)
+VALUES (:'T', :'site', :'n1_nozzle', :'shf', :'n1', FALSE, 'MANUAL', :hand, :hand, 'PENDING', :'SUP2', :'t_hand', FALSE);
 UPDATE nozzle_assignment SET state = 'CLOSED', released_at = :'t_hand', released_by = :'SUP2' WHERE id = :'n1';
 INSERT INTO nozzle_assignment (tenant_id, site_id, shift_id, nozzle_id, attendant_id, assigned_by, assigned_at)
 VALUES (:'T', :'site', :'shf', :'n1_nozzle', :'ALICE', :'SUP2', :'t_hand') RETURNING id AS n1b \gset
 INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id, is_opening, source,
-                           volume_totalizer, evidence, recorded_by, captured_at)
-VALUES (:'T', :'site', :'n1_nozzle', :'shf', :'n1b', TRUE, 'MANUAL', :hand, 'PENDING', :'SUP2', :'t_hand');
+                           volume_totalizer, electronic_totalizer, evidence, recorded_by, captured_at)
+VALUES (:'T', :'site', :'n1_nozzle', :'shf', :'n1b', TRUE, 'MANUAL', :hand, :hand, 'PENDING', :'SUP2', :'t_hand');
 UPDATE nozzle_assignment SET handed_to_id = :'n1b', state = 'HANDED_OVER' WHERE id = :'n1';
 
 \echo '  shift math: Alice tests N1 with a 10 L can (back to tank) and pours 5 L back'
@@ -67,6 +67,7 @@ SELECT round(fn_book_stock(:'n1_tank'), 1) AS book1, round(fn_book_stock(:'n2_ta
 SELECT fn_close_shift(:'shf', :'SUP2', 'SCHEDULED',
   (SELECT jsonb_agg(jsonb_build_object('assignment_id', na.id, 'is_rollover', false,
      'volume_totalizer', (SELECT volume_totalizer FROM meter_reading mr WHERE mr.assignment_id = na.id AND mr.is_opening)
+        + CASE n.code WHEN 'N1' THEN 25 WHEN 'N2' THEN 300 WHEN 'N3' THEN 200 ELSE 400 END, 'electronic_totalizer', (SELECT volume_totalizer FROM meter_reading mr WHERE mr.assignment_id = na.id AND mr.is_opening)
         + CASE n.code WHEN 'N1' THEN 25 WHEN 'N2' THEN 300 WHEN 'N3' THEN 200 ELSE 400 END))
      FROM nozzle_assignment na JOIN nozzle n ON n.id = na.nozzle_id WHERE na.shift_id = :'shf' AND na.state = 'ACTIVE'),
   -- Each tank dipped at exactly what the records say is left: no variance.
@@ -75,10 +76,10 @@ SELECT fn_close_shift(:'shf', :'SUP2', 'SCHEDULED',
     jsonb_build_object('tank_id', :'n1_tank', 'product_litres', :book1 - (370 + 25 + 200) + (20.1 + 9.9 + 5), 'water_litres', 0),
     jsonb_build_object('tank_id', :'n2_tank', 'product_litres', :book2 - (300 + 400), 'water_litres', 0)),
   jsonb_build_array(
-    jsonb_build_object('attendant_id', :'JOHN',  'cash', 100000, 'tenders', '[]'::jsonb),
-    jsonb_build_object('attendant_id', :'ALICE', 'cash', 100000, 'tenders', '[]'::jsonb),
-    jsonb_build_object('attendant_id', :'PETER', 'cash', 100000, 'tenders', '[]'::jsonb),
-    jsonb_build_object('attendant_id', :'MOSES', 'cash', 100000, 'tenders', '[]'::jsonb))
+    jsonb_build_object('attendant_id', :'JOHN',  'cash', 100000, 'tenders', '[]'::jsonb, 'shortage_reason', 'Scenario: a round sum handed in'),
+    jsonb_build_object('attendant_id', :'ALICE', 'cash', 100000, 'tenders', '[]'::jsonb, 'shortage_reason', 'Scenario: a round sum handed in'),
+    jsonb_build_object('attendant_id', :'PETER', 'cash', 100000, 'tenders', '[]'::jsonb, 'shortage_reason', 'Scenario: a round sum handed in'),
+    jsonb_build_object('attendant_id', :'MOSES', 'cash', 100000, 'tenders', '[]'::jsonb, 'shortage_reason', 'Scenario: a round sum handed in'))
 )::text AS result \gset
 
 DO $$

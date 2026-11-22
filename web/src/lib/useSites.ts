@@ -35,3 +35,17 @@ export function useSites(): string[] {
 
   return sites;
 }
+
+/** The trading sites with their ids, for a form that files something against one. */
+export function useSiteOptions(): { id: string; name: string; kind: string }[] {
+  const [sites, setSites] = useState<{ id: string; name: string; kind: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .get<DashboardOverview>('/api/v1/dashboard/overview')
+      .then((o) => { if (!cancelled) setSites(o.sites.map((x) => ({ id: x.id, name: x.name, kind: x.kind }))); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+  return sites;
+}

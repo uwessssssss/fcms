@@ -37,9 +37,13 @@ public record RosterLine(Guid NozzleId, Guid AttendantId,
 public record OpenShiftRequest(string Label, List<OpeningDip> OpeningDips,
     List<RosterLine> Roster, DateOnly? BusinessDate);
 
+/// <summary>Both meters are read at every close (730). DifferenceReason is
+/// needed only when the electronic head's litres and the manual meter's are
+/// more than 1 L apart: the close then goes to the manager flagged.</summary>
 public record ClosingReading(Guid AssignmentId, decimal VolumeTotalizer,
     decimal? ElectronicTotalizer, decimal? AmountTotalizer, bool IsRollover,
-    string? PhotoUrl, string? EvidenceReason, DateTime? CapturedAt);
+    string? PhotoUrl, string? EvidenceReason, DateTime? CapturedAt,
+    string? DifferenceReason = null);
 
 /// <summary>
 /// A dip, in LITRES.
@@ -157,6 +161,10 @@ public sealed class AssignmentView
     public string State { get; set; } = "";
     public decimal? OpeningTotalizer { get; set; }
     public decimal? ClosingTotalizer { get; set; }
+    /// <summary>The electronic head, read alongside (730). Its total differs
+    /// from the manual one; only the litres compare.</summary>
+    public decimal? OpeningElectronic { get; set; }
+    public decimal? ClosingElectronic { get; set; }
     public decimal? GrossLitres { get; set; }
     public decimal? DivergenceLitres { get; set; }
 }
@@ -195,8 +203,33 @@ public sealed class CashUpView
     public decimal DiscountTotal { get; set; }
     public decimal ShortageRaised { get; set; }
     public decimal OverageRaised { get; set; }
+    /// <summary>Short (+) or over (-): what the counted cash missed the
+    /// expected cash by. It was the sum of the cash-up's lines, which the close
+    /// makes nil with the shortage line itself -- so every attendant showed as
+    /// balanced and the screen never asked why anyone was short (730).</summary>
     public decimal Unallocated { get; set; }
+    /// <summary>Handed in exactly what was owed: no shortage, no overage.</summary>
     public bool IsBalanced { get; set; }
+
+    // --- the statement (730): from the meters to the cash in hand ---------
+    public decimal MeteredLitres { get; set; }
+    public decimal TestLitres { get; set; }
+    public decimal OwnUseLitres { get; set; }
+    public decimal ReturnedLitres { get; set; }
+    /// <summary>Metered less tests, own use and returns to tank.</summary>
+    public decimal SoldLitres { get; set; }
+    public decimal FuelValue { get; set; }
+    public decimal ShopValue { get; set; }
+    public decimal MobileMoney { get; set; }
+    /// <summary>Card and vouchers.</summary>
+    public decimal CardAndVouchers { get; set; }
+    /// <summary>Credit at agreed prices: pump value less what the customer owes.</summary>
+    public decimal AgreedPrices { get; set; }
+    public decimal CashDropped { get; set; }
+    public decimal CashAtClose { get; set; }
+    /// <summary>Fuel + shop - mobile money - card - credit - agreed prices
+    /// - discounts - drops: what the attendant should still be holding.</summary>
+    public decimal ExpectedCash { get; set; }
 }
 
 public record ShiftDetail(ShiftSummary Shift, List<AssignmentView> Assignments,
@@ -330,7 +363,8 @@ public sealed class ShiftService
                         is_rollover = r.IsRollover,
                         photo_url = r.PhotoUrl,
                         evidence_reason = r.EvidenceReason,
-                        captured_at = r.CapturedAt
+                        captured_at = r.CapturedAt,
+                        difference_reason = r.DifferenceReason
                     }), Json),
                     dips = JsonSerializer.Serialize(req.Dips.Select(d => new
                     {
@@ -387,7 +421,11 @@ public sealed class ShiftService
         Require("shift.close");
         var conn = await _uow.ConnectionAsync(ct);
 
-        await conn.ExecuteAsync(new CommandDefinition("SAVEPOINT close_preview",
+        // Preview mode (730): the close shows a shortage instead of refusing it
+        // for want of a reason -- this is how the supervisor finds out who is
+        // short. Set inside the savepoint, so the rollback clears it too.
+        await conn.ExecuteAsync(new CommandDefinition(
+            "SAVEPOINT close_preview; SELECT set_config('fcms.close_preview', 'on', true)",
             transaction: _uow.Transaction, cancellationToken: ct));
         try
         {
@@ -489,6 +527,8 @@ public sealed class ShiftService
                    na.state AS State,
                    mo.volume_totalizer AS OpeningTotalizer,
                    mc.volume_totalizer AS ClosingTotalizer,
+                   mo.electronic_totalizer AS OpeningElectronic,
+                   mc.electronic_totalizer AS ClosingElectronic,
                    me.gross_litres     AS GrossLitres,
                    me.divergence_litres AS DivergenceLitres
               FROM nozzle_assignment na
@@ -551,14 +591,42 @@ public sealed class ShiftService
 
         var cashUps = (await conn.QueryAsync<CashUpView>(new CommandDefinition(
             """
-            SELECT cash_up_id AS CashUpId, staff_id AS StaffId, full_name AS FullName,
-                   status AS Status, sales_value AS SalesValue,
-                   cash_declared AS CashDeclared,
-                   electronic_declared AS ElectronicDeclared,
-                   credit_total AS CreditTotal, discount_total AS DiscountTotal,
-                   shortage_raised AS ShortageRaised, overage_raised AS OverageRaised,
-                   unallocated AS Unallocated, is_balanced AS IsBalanced
-              FROM v_cash_up_position WHERE shift_id = @id ORDER BY full_name
+            SELECT v.cash_up_id AS CashUpId, v.staff_id AS StaffId, v.full_name AS FullName,
+                   v.status AS Status, v.sales_value AS SalesValue,
+                   v.cash_declared AS CashDeclared,
+                   v.electronic_declared AS ElectronicDeclared,
+                   v.credit_total AS CreditTotal, v.discount_total AS DiscountTotal,
+                   v.shortage_raised AS ShortageRaised, v.overage_raised AS OverageRaised,
+                   v.shortage_raised - v.overage_raised AS Unallocated,
+                   (v.shortage_raised = 0 AND v.overage_raised = 0) AS IsBalanced,
+                   COALESCE(l.metered, 0) AS MeteredLitres, COALESCE(l.tests, 0) AS TestLitres,
+                   COALESCE(l.own, 0) AS OwnUseLitres, COALESCE(l.rtt, 0) AS ReturnedLitres,
+                   COALESCE(l.sold, 0) AS SoldLitres,
+                   COALESCE(m.fuel, 0) AS FuelValue, COALESCE(m.shop, 0) AS ShopValue,
+                   COALESCE(m.momo, 0) AS MobileMoney, COALESCE(m.card, 0) AS CardAndVouchers,
+                   COALESCE(m.agreed, 0) AS AgreedPrices,
+                   COALESCE(m.drops, 0) AS CashDropped, COALESCE(m.at_close, 0) AS CashAtClose,
+                   COALESCE(m.fuel, 0) + COALESCE(m.shop, 0) - COALESCE(m.momo, 0) - COALESCE(m.card, 0)
+                     - v.credit_total - COALESCE(m.agreed, 0) - v.discount_total - COALESCE(m.drops, 0) AS ExpectedCash
+              FROM v_cash_up_position v
+              LEFT JOIN LATERAL (
+                SELECT SUM(me.gross_litres) AS metered,
+                       SUM((SELECT COALESCE(SUM(md.litres), 0) FROM metered_disposition md WHERE md.meter_event_id = me.id AND md.kind = 'PUMP_TEST')) AS tests,
+                       SUM((SELECT COALESCE(SUM(md.litres), 0) FROM metered_disposition md WHERE md.meter_event_id = me.id AND md.kind = 'OWN_USE')) AS own,
+                       SUM((SELECT COALESCE(SUM(md.litres), 0) FROM metered_disposition md WHERE md.meter_event_id = me.id AND md.kind = 'RTT')) AS rtt,
+                       SUM((SELECT COALESCE(SUM(md.litres), 0) FROM metered_disposition md WHERE md.meter_event_id = me.id AND md.kind = 'SALE')) AS sold
+                  FROM meter_event me JOIN nozzle_assignment na ON na.id = me.assignment_id
+                 WHERE me.shift_id = v.shift_id AND na.attendant_id = v.staff_id) l ON true
+              LEFT JOIN LATERAL (
+                SELECT SUM(mm.amount) FILTER (WHERE mm.entry = 'SALE' AND mm.dry_sale_id IS NULL) AS fuel,
+                       SUM(mm.amount) FILTER (WHERE mm.entry = 'SALE' AND mm.dry_sale_id IS NOT NULL) AS shop,
+                       -SUM(mm.amount) FILTER (WHERE mm.settlement = 'MOBILE_MONEY') AS momo,
+                       -SUM(mm.amount) FILTER (WHERE mm.settlement IN ('CARD', 'VOUCHER')) AS card,
+                       -SUM(mm.amount) FILTER (WHERE mm.settlement = 'PRICE_AGREEMENT') AS agreed,
+                       -SUM(mm.amount) FILTER (WHERE mm.settlement = 'CASH' AND mm.reference LIKE 'DROP %') AS drops,
+                       -SUM(mm.amount) FILTER (WHERE mm.settlement = 'CASH' AND COALESCE(mm.reference, '') NOT LIKE 'DROP %') AS at_close
+                  FROM money_movement mm WHERE mm.cash_up_id = v.cash_up_id) m ON true
+             WHERE v.shift_id = @id ORDER BY v.full_name
             """,
             new { id = shiftId }, transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
@@ -649,7 +717,16 @@ public sealed class ShiftService
                    COALESCE(cu.short, 0)     AS ShortageRaised,
                    COALESCE(cu.over, 0)      AS OverageRaised,
                    COALESCE(v.variance, 0)   AS VarianceLitres,
-                   COALESCE(v.value, 0)      AS VarianceValue
+                   -- The books' own figure once the shift is approved: its journal's
+                   -- stock gains and losses (5100), a loss positive there. Before
+                   -- approval, the tanks' average cost.
+                   COALESCE(-(SELECT SUM(l.amount) FROM gl_line l
+                                JOIN gl_journal j ON j.id = l.journal_id
+                                JOIN gl_account a ON a.id = l.account_id
+                               WHERE j.source = 'shift' AND j.source_id = s.id::text AND a.code = '5100'
+                                 AND j.reverses_id IS NULL
+                                 AND NOT EXISTS (SELECT 1 FROM gl_journal r WHERE r.reverses_id = j.id)),
+                            v.value, 0)      AS VarianceValue
               FROM shift s
               JOIN staff op ON op.id = s.opened_by
               JOIN site si ON si.id = s.site_id

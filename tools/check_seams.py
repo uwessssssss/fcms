@@ -321,7 +321,8 @@ for f, src in cs.items():
     for m in re.finditer(r"public record (\w+)\(([^;]*?)\)\s*;", clean, re.S):
         props = set()
         for part in re.split(r",(?![^<>()]*[>)])", m.group(2)):
-            pm = re.match(r"\s*[\w<>\[\],\s?]+?\s+(\w+)\s*$", part.strip())
+            # A parameter may carry a default (string? Reason = null).
+            pm = re.match(r"\s*[\w<>\[\],\s?]+?\s+(\w+)\s*(?:=[^,]*)?$", part.strip())
             if pm:
                 props.add(pm.group(1))
         if props:

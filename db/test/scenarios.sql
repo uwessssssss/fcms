@@ -135,6 +135,7 @@ SELECT round(fn_book_stock('0d000000-0000-4000-8000-000000000001'), 1) - 600 AS 
 SELECT fn_close_shift(:'shf', :'SUP2', 'SCHEDULED',
   (SELECT jsonb_agg(jsonb_build_object('assignment_id', na.id, 'is_rollover', false,
      'volume_totalizer', (SELECT volume_totalizer FROM meter_reading mr WHERE mr.assignment_id = na.id AND mr.is_opening)
+        + CASE n.code WHEN 'N1' THEN 400 WHEN 'N2' THEN 300 WHEN 'N3' THEN 200 ELSE 400 END, 'electronic_totalizer', (SELECT volume_totalizer FROM meter_reading mr WHERE mr.assignment_id = na.id AND mr.is_opening)
         + CASE n.code WHEN 'N1' THEN 400 WHEN 'N2' THEN 300 WHEN 'N3' THEN 200 ELSE 400 END))
      FROM nozzle_assignment na JOIN nozzle n ON n.id = na.nozzle_id WHERE na.shift_id = :'shf' AND na.state = 'ACTIVE'),
   jsonb_build_array(
@@ -202,7 +203,7 @@ SELECT fn_open_shift(:'SITE', 'DAY', :'SUP',
     jsonb_build_object('tank_id', '0d000000-0000-4000-8000-000000000001', 'product_litres', round(fn_book_stock('0d000000-0000-4000-8000-000000000001'), 1)),
     jsonb_build_object('tank_id', '0d000000-0000-4000-8000-000000000002', 'product_litres', round(fn_book_stock('0d000000-0000-4000-8000-000000000002'), 1))),
   (SELECT jsonb_agg(jsonb_build_object('nozzle_id', n.id, 'attendant_id', '10000000-0000-4000-8000-000000000010',
-          'volume_totalizer', (SELECT max(volume_totalizer) FROM meter_reading mr WHERE mr.nozzle_id = n.id)))
+          'volume_totalizer', (SELECT max(volume_totalizer) FROM meter_reading mr WHERE mr.nozzle_id = n.id), 'electronic_totalizer', (SELECT max(volume_totalizer) FROM meter_reading mr WHERE mr.nozzle_id = n.id)))
      FROM nozzle n WHERE n.code = 'N1' AND n.site_id = :'SITE'),
   NULL, NULL) AS new_shift \gset
 DO $$

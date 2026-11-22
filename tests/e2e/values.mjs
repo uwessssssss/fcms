@@ -153,6 +153,44 @@ await settle();
   }
 }
 
+// ---- A shift, opened: each attendant's statement --------------------------------
+// From the meters to the cash in hand, as the close screen shows it (730).
+{
+  const token = await page.evaluate(() => sessionStorage.getItem('fcms_token'));
+  const get = async (u) => { const r = await fetch(`${API}${u}`, { headers: { Authorization: 'Bearer ' + token, 'X-Forwarded-For': '10.30.0.1' } }); return r.ok ? r.json() : { status: r.status }; };
+  // Every shift with a shortage, and ten more.
+  const ids = sql(`(SELECT DISTINCT shift_id FROM staff_shortage) UNION ALL (SELECT id FROM shift WHERE state <> 'OPEN' ORDER BY closed_at DESC LIMIT 10)`).split('\n').filter(Boolean);
+  let n = 0; const bad = { litres: [], expected: [], balance: [], flag: [], db: [] };
+  for (const id of [...new Set(ids)]) {
+    const d = await get(`/api/shifts/${id}`);
+    for (const c of d.cashUps || []) {
+      n++;
+      const tag = `${d.shift.businessDate} ${d.shift.label} ${c.fullName}`;
+      if (!near(c.meteredLitres - c.testLitres - c.ownUseLitres - c.returnedLitres, c.soldLitres, 0.001)) bad.litres.push(tag);
+      if (!near(c.fuelValue + c.shopValue - c.mobileMoney - c.cardAndVouchers - c.creditTotal - c.agreedPrices - c.discountTotal - c.cashDropped, c.expectedCash)) bad.expected.push(tag);
+      if (!near(c.expectedCash - c.cashAtClose, c.shortageRaised - c.overageRaised)) bad.balance.push(tag);
+      if (c.isBalanced !== (Number(c.shortageRaised) === 0 && Number(c.overageRaised) === 0)) bad.flag.push(tag);
+      const dbShort = Number(sql(`SELECT COALESCE(SUM(amount), 0) FROM staff_shortage WHERE cash_up_id = '${c.cashUpId}'`));
+      if (!near(dbShort, c.shortageRaised)) bad.db.push(`${tag}: ${c.shortageRaised} vs ${dbShort}`);
+    }
+  }
+  check('logic', 'Shift detail', 'cash-ups to check', n > 0, `${n}`);
+  check('logic', 'Shift detail', 'litres sold = metered - tests - own use - returned to tank', bad.litres.length === 0, bad.litres.slice(0, 3).join(', '));
+  check('logic', 'Shift detail', 'cash expected = fuel + shop - mobile money - card - credit - agreed prices - discounts - drops', bad.expected.length === 0, bad.expected.slice(0, 3).join(', '));
+  check('logic', 'Shift detail', 'cash expected - cash counted = shortage - overage', bad.balance.length === 0, bad.balance.slice(0, 3).join(', '));
+  check('logic', 'Shift detail', 'an attendant short or over is never shown as balanced', bad.flag.length === 0, bad.flag.slice(0, 3).join(', '));
+  check('truth', 'Shift detail', 'each shortage is the one raised against that attendant', bad.db.length === 0, bad.db.slice(0, 3).join(', '));
+
+  // Site Operations: each shift's sales on the station's busiest recent day.
+  const [site, day] = sql(`SELECT s.site_id, s.business_date FROM shift s JOIN site t ON t.id = s.site_id AND t.kind = 'STATION'
+                            WHERE s.state <> 'OPEN' ORDER BY s.business_date DESC LIMIT 1`).split('|');
+  const pts = await get(`/api/v1/sites/${site}/analytics/by-shift?date=${day}`);
+  const offPts = (Array.isArray(pts) ? pts : []).filter((p) => !near(p.revenue, Number(sql(
+    `SELECT COALESCE(SUM(amount), 0) FROM money_movement WHERE shift_id = '${p.shiftId}' AND entry = 'SALE' AND dry_sale_id IS NULL`))));
+  check('truth', 'Site operations', 'each shift\'s fuel sales = what its attendants were charged', Array.isArray(pts) && pts.length > 0 && offPts.length === 0,
+    Array.isArray(pts) ? `${pts.length} shifts on ${day}, ${offPts.length} off` : `status ${pts.status}`);
+}
+
 // ---- Books ---------------------------------------------------------------------
 {
   await open('/books');

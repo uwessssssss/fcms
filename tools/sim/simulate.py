@@ -126,6 +126,7 @@ class Sim:
         self.db, self.start, self.days = db, start, days
         self.rng = random.Random(seed)
         self.tot = {}           # nozzle -> totalizer
+        self.elec = {}          # nozzle -> electronic head (730): its own scale, the same litres
         self.physical = {}      # product -> litres actually in the tank
         self.drop_book = 1
         self.receipt = 1
@@ -159,6 +160,9 @@ class Sim:
         for n, nid in NOZZLES.items():
             v = self.db.one(SUP["DAY"], f"SELECT COALESCE(max(volume_totalizer), 0) FROM meter_reading WHERE nozzle_id = {q(nid)};")
             self.tot[n] = float(v) if float(v) > 0 else float(self.rng.randint(150_000, 600_000))
+            e = self.db.one(SUP["DAY"], f"SELECT COALESCE(max(electronic_totalizer), 0) FROM meter_reading WHERE nozzle_id = {q(nid)};")
+            # The electronic head reads a different total -- only its litres compare.
+            self.elec[n] = float(e) if float(e) > 0 else round(self.tot[n] * 1.7 + self.rng.randint(1_000, 90_000), 2)
         for p in TANKS:
             self.physical[p] = self.book(p)
         SUPPLIERS[:] = [r[0] for r in self.db.run(SUP["DAY"], "SELECT id FROM supplier ORDER BY name;")]
@@ -356,7 +360,8 @@ SELECT {q(T)}, {q(SITE)}, {q(str(d))}, {q(cat)}::expense_category, {q(desc)}, {a
         db.at(t_open)
         dips = [{"tank_id": TANKS[p], "product_litres": round(self.physical[p] + rng.gauss(0, 2.5), 1),
                  "water_litres": 0} for p in TANKS]
-        ros = [{"nozzle_id": NOZZLES[n], "attendant_id": roster[n], "volume_totalizer": round(self.tot[n], 3)}
+        ros = [{"nozzle_id": NOZZLES[n], "attendant_id": roster[n], "volume_totalizer": round(self.tot[n], 3),
+                "electronic_totalizer": round(self.elec[n], 2)}
                for n in NOZZLES]
         # ShiftService.OpenAsync -> fn_open_shift
         shift_id = db.one(sup, f"SELECT fn_open_shift({q(SITE)}, {q(label)}, {q(sup)}, "
@@ -518,6 +523,8 @@ VALUES ({q(T)}, {q(SITE)}, {q(item)}, {q(shift_id)}, 'SALE_OUT', {qty}, -{qty}, 
         db.at(t_close)
         for n in NOZZLES:
             self.tot[n] = round(self.tot[n] + metered[n], 3)
+            # Two healthy meters: the same litres to within a few tenths (730 allows 1 L).
+            self.elec[n] = round(self.elec[n] + metered[n] + max(-0.6, min(0.6, rng.gauss(0, 0.2))), 2)
         for n in NOZZLES:
             self.physical[NOZZLE_PRODUCT[n]] += tested[n]   # poured back
         loss = None
@@ -526,7 +533,8 @@ VALUES ({q(T)}, {q(SITE)}, {q(item)}, {q(shift_id)}, 'SALE_OUT', {qty}, -{qty}, 
             loss = (p, round(rng.uniform(60, 160), 1))
             self.physical[p] -= loss[1]
             self.stats["losses"] += 1
-        readings = [{"assignment_id": assign[n], "volume_totalizer": self.tot[n], "is_rollover": False} for n in NOZZLES]
+        readings = [{"assignment_id": assign[n], "volume_totalizer": self.tot[n],
+                     "electronic_totalizer": self.elec[n], "is_rollover": False} for n in NOZZLES]
         close_dips = [{"tank_id": TANKS[p], "product_litres": round(self.physical[p] + rng.gauss(0, 2.0), 1),
                        "water_litres": 0} for p in TANKS]
 

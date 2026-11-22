@@ -2,7 +2,7 @@
 import { ApiError, api } from '@/lib/api';
 import type { SiteApprovalRow, StaffRow } from '@/types/api';
 import { useAuth } from '@/context/AuthContext';
-import { useSites } from '@/lib/useSites';
+import { useSites, useSiteOptions } from '@/lib/useSites';
 import { FormProblem } from '@/components/ui/Issues';
 import React, { useState, useCallback, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
@@ -100,7 +100,12 @@ export default function UsersContent() {
   const flagProblem = (k: string, m: string) => setProblems((p) => ({ ...p, [k]: m }));
   const clearProblem = (k: string) => setProblems((p) => { if (!(k in p)) return p; const n = { ...p }; delete n[k]; return n; });
   const SITES = ['All Sites', ...useSites()];
-  const { assignedSite, assignedSiteId } = useAuth();
+  const { assignedSite, assignedSiteId, user } = useAuth();
+  // Where a new person can be appointed: a station's own people to their station;
+  // head office to any station or depot. The id is what the server files against.
+  const siteOptions = useSiteOptions().filter((x) => !assignedSiteId || x.id === assignedSiteId);
+  // Only a system administrator appoints head office (fn_may_create_staff).
+  const pickableRoles = ROLES.filter((r) => r.value !== 'head_office' || user?.role === 'system-admin');
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,7 +211,9 @@ export default function UsersContent() {
 
     try {
       await api.post<{ id: string }>('/api/v1/organisation/people', {
-        siteId: assignedSiteId,
+        // Head office staff belong to the head office whatever is sent; a
+        // station's own manager can only appoint to their station.
+        siteId: form.role === 'head_office' ? null : (assignedSiteId ?? (form.site || null)),
         employeeNo: form.email.trim().toUpperCase(),
         fullName: form.name.trim(),
         role: roleForServer,
@@ -468,18 +475,22 @@ export default function UsersContent() {
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>Role</label>
               <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as AppUser['role'] }))} className="input-field w-full text-sm">
-                {/* The API appoints station roles only; it refuses HEAD_OFFICE here
-                    (AdminService.Roles), so the form no longer offers it. */}
-                {ROLES.filter(r => r.value !== 'head_office').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                {pickableRoles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>Assigned Site</label>
-              <select value={form.site} onChange={e => setForm(f => ({ ...f, site: e.target.value }))} className="input-field w-full text-sm">
-                {SITES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {form.role === 'head_office' ? (
+                <p className="text-sm py-2">Head office</p>
+              ) : (
+                <select value={assignedSiteId ?? form.site} disabled={!!assignedSiteId} aria-label="Assigned site"
+                        onChange={e => setForm(f => ({ ...f, site: e.target.value }))} className="input-field w-full text-sm">
+                  {!assignedSiteId && <option value="">Choose the station or depot...</option>}
+                  {siteOptions.map(x => <option key={x.id} value={x.id}>{x.name}{x.kind === 'DEPOT' ? ' (depot)' : ''}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>Status</label>

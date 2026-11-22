@@ -22,7 +22,7 @@ import type {
 /**
  * The reports a director, an auditor or a head office actually asks for.
  *
- * THE DIRECTORS' PACK comes first because it answers the question a director
+ * THE MANAGEMENT PACK (once the "directors' pack") comes first because it answers the question an owner
  * asks: are we making money, is the fuel all there, who owes us, what do we
  * owe, and what is waiting on somebody's signature. Every figure is computed
  * by the server from the ledger -- this screen formats, it does not calculate.
@@ -41,7 +41,7 @@ import type {
 type Tab = 'directors' | 'loss' | 'scorecard' | 'stockcard' | 'performance' | 'duty' | 'hourly';
 
 const TABS: [Tab, string][] = [
-  ['directors', "Directors' pack"],
+  ['directors', 'Management pack'],
   ['loss', 'Loss trend'],
   ['scorecard', 'Attendants'],
   ['stockcard', 'Stock card'],

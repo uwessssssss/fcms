@@ -143,23 +143,23 @@ VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         '77777777-7777-7777-7777-777777777777', now() - interval '8 hours');
 
 INSERT INTO meter_reading (id, tenant_id, site_id, nozzle_id, shift_id,
-  assignment_id, is_opening, source, volume_totalizer, recorded_by, captured_at)
+  assignment_id, is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
 OVERRIDING SYSTEM VALUE
 VALUES (1,'11111111-1111-1111-1111-111111111111',
         '22222222-2222-2222-2222-222222222222',
         '66666666-6666-6666-6666-666666666666',
         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', TRUE,'MANUAL', 100000,
+        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', TRUE,'MANUAL', 100000, 100000,
         '77777777-7777-7777-7777-777777777777', now() - interval '8 hours');
 
 INSERT INTO meter_reading (id, tenant_id, site_id, nozzle_id, shift_id,
-  assignment_id, is_opening, source, volume_totalizer, recorded_by, captured_at)
+  assignment_id, is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
 OVERRIDING SYSTEM VALUE
 VALUES (2,'11111111-1111-1111-1111-111111111111',
         '22222222-2222-2222-2222-222222222222',
         '66666666-6666-6666-6666-666666666666',
         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', FALSE,'MANUAL', 101000,
+        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', FALSE,'MANUAL', 101000, 101000,
         '77777777-7777-7777-7777-777777777777', now());
 
 SET CONSTRAINTS ALL DEFERRED;
@@ -402,22 +402,22 @@ VALUES ('aa000000-0000-4000-8000-00000000aa03',
 
 SELECT test_refuses('an attendant cannot author a meter reading', $sql$
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id,
-    assignment_id, is_opening, source, volume_totalizer, recorded_by, captured_at)
+    assignment_id, is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
   VALUES ('11111111-1111-1111-1111-111111111111',
     '22222222-2222-2222-2222-222222222222','aa000000-0000-4000-8000-00000000aa02',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','aa000000-0000-4000-8000-00000000aa03',
-    TRUE,'MANUAL', 100,'88888888-8888-8888-8888-888888888888', now());
+    TRUE,'MANUAL', 100, 100,'88888888-8888-8888-8888-888888888888', now());
 $sql$, 'is_operator');
 
 -- And the same insert by a supervisor must be ACCEPTED, or the test above
 -- would pass even if the table were simply broken.
 SELECT test_allows('a supervisor CAN author a meter reading', $sql$
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id,
-    assignment_id, is_opening, source, volume_totalizer, recorded_by, captured_at)
+    assignment_id, is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
   VALUES ('11111111-1111-1111-1111-111111111111',
     '22222222-2222-2222-2222-222222222222','aa000000-0000-4000-8000-00000000aa02',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','aa000000-0000-4000-8000-00000000aa03',
-    TRUE,'MANUAL', 100,'77777777-7777-7777-7777-777777777777', now());
+    TRUE,'MANUAL', 100, 100,'77777777-7777-7777-7777-777777777777', now());
 $sql$);
 
 SELECT test_refuses('a supervisor cannot be rostered onto a nozzle', $sql$
@@ -1322,8 +1322,8 @@ BEGIN
                                  attendant_id, assigned_by, assigned_at)
   VALUES (asg, t, s, sh, nz, att, sup, now() - interval '8 hours');
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id,
-                             is_opening, source, volume_totalizer, recorded_by, captured_at)
-  VALUES (t, s, nz, sh, asg, TRUE, 'MANUAL', 100000, sup, now() - interval '8 hours');
+                             is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
+  VALUES (t, s, nz, sh, asg, TRUE, 'MANUAL', 100000, 100000, sup, now() - interval '8 hours');
 
   -- Twenty litres poured back, recorded by the supervisor with a reason.
   INSERT INTO return_to_tank (tenant_id, site_id, shift_id, nozzle_id, litres, reason, recorded_by)
@@ -1334,7 +1334,7 @@ BEGIN
   PERFORM fn_close_shift(
     sh, sup, 'SCHEDULED',
     jsonb_build_array(jsonb_build_object(
-      'assignment_id', asg, 'volume_totalizer', 100100, 'is_rollover', false)),
+      'assignment_id', asg, 'volume_totalizer', 100100, 'electronic_totalizer', 100100, 'is_rollover', false)),
     -- 500 litres of water, entered in LITRES. The alarm used to read
     -- millimetres only, so this would have passed in silence.
     jsonb_build_array(jsonb_build_object('tank_id', tk, 'product_litres', 9920,
@@ -1441,8 +1441,8 @@ BEGIN
                                  attendant_id, assigned_by, assigned_at)
   VALUES (asg, t, s, sh, nz, att, sup, now() - interval '8 hours');
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id,
-                             is_opening, source, volume_totalizer, recorded_by, captured_at)
-  VALUES (t, s, nz, sh, asg, TRUE, 'MANUAL', 100000, sup, now() - interval '8 hours');
+                             is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
+  VALUES (t, s, nz, sh, asg, TRUE, 'MANUAL', 100000, 100000, sup, now() - interval '8 hours');
 
   -- Twenty litres poured back, recorded by the supervisor with a reason.
   INSERT INTO return_to_tank (tenant_id, site_id, shift_id, nozzle_id, litres, reason, recorded_by)
@@ -1453,7 +1453,7 @@ BEGIN
   PERFORM fn_close_shift(
     sh, sup, 'SCHEDULED',
     jsonb_build_array(jsonb_build_object(
-      'assignment_id', asg, 'volume_totalizer', 100100, 'is_rollover', false)),
+      'assignment_id', asg, 'volume_totalizer', 100100, 'electronic_totalizer', 100100, 'is_rollover', false)),
     -- 500 litres of water, entered in LITRES. The alarm used to read
     -- millimetres only, so this would have passed in silence.
     jsonb_build_array(jsonb_build_object('tank_id', tk, 'product_litres', 9920,
@@ -1836,28 +1836,28 @@ BEGIN
   INSERT INTO nozzle_assignment (id, tenant_id, site_id, shift_id, nozzle_id, attendant_id, assigned_by, assigned_at)
   VALUES (asa, t, s, sh, nz, a, sup, now() - interval '8 hours');
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id,
-                             is_opening, source, volume_totalizer, recorded_by, captured_at)
-  VALUES (t, s, nz, sh, asa, TRUE, 'MANUAL', 100000, sup, now() - interval '8 hours');
+                             is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
+  VALUES (t, s, nz, sh, asa, TRUE, 'MANUAL', 100000, 100000, sup, now() - interval '8 hours');
 
   -- The handover, as HandoverAsync writes it: A's closing reading, A released,
   -- B assigned, B's opening reading at the same totalizer.
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id,
-                             is_opening, source, volume_totalizer, recorded_by, captured_at)
-  VALUES (t, s, nz, sh, asa, FALSE, 'MANUAL', 100040, sup, now() - interval '4 hours');
+                             is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
+  VALUES (t, s, nz, sh, asa, FALSE, 'MANUAL', 100040, 100040, sup, now() - interval '4 hours');
   UPDATE nozzle_assignment SET state = 'CLOSED', released_at = now() - interval '4 hours',
          released_by = sup WHERE id = asa;
   INSERT INTO nozzle_assignment (id, tenant_id, site_id, shift_id, nozzle_id, attendant_id, assigned_by, assigned_at)
   VALUES (asb, t, s, sh, nz, b, sup, now() - interval '4 hours');
   UPDATE nozzle_assignment SET state = 'HANDED_OVER', handed_to_id = asb WHERE id = asa;
   INSERT INTO meter_reading (tenant_id, site_id, nozzle_id, shift_id, assignment_id,
-                             is_opening, source, volume_totalizer, recorded_by, captured_at)
-  VALUES (t, s, nz, sh, asb, TRUE, 'MANUAL', 100040, sup, now() - interval '4 hours');
+                             is_opening, source, volume_totalizer, electronic_totalizer, recorded_by, captured_at)
+  VALUES (t, s, nz, sh, asb, TRUE, 'MANUAL', 100040, 100040, sup, now() - interval '4 hours');
 
   v_price := fn_shift_price(sh, pms);
   -- The screen submits ONLY the active nozzle -- B -- exactly as it does.
   PERFORM fn_close_shift(
     sh, sup, 'SCHEDULED',
-    jsonb_build_array(jsonb_build_object('assignment_id', asb, 'volume_totalizer', 100100, 'is_rollover', false)),
+    jsonb_build_array(jsonb_build_object('assignment_id', asb, 'volume_totalizer', 100100, 'electronic_totalizer', 100100, 'is_rollover', false)),
     jsonb_build_array(jsonb_build_object('tank_id', tk, 'product_litres', 9900, 'water_litres', 0)),
     jsonb_build_array(
       jsonb_build_object('attendant_id', a, 'cash', 40 * v_price, 'tenders', '[]'::jsonb),

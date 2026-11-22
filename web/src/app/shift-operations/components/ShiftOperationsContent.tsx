@@ -80,7 +80,7 @@ export default function ShiftOperationsContent() {
       .then((rows) => setTankInfo(Object.fromEntries(rows.map((r) => [r.id, r]))))
       .catch(() => undefined);
   }, []);
-  const [roster, setRoster] = useState<Record<string, { attendantId: string; totalizer: string }>>({});
+  const [roster, setRoster] = useState<Record<string, { attendantId: string; totalizer: string; elec?: string }>>({});
   // Saved rosters: the usual nozzle-to-attendant pattern, applied in one go
   // instead of eight selections at six in the morning. Applying one fills the
   // attendants only -- the opening totalizers are still read off each pump.
@@ -94,7 +94,7 @@ export default function ShiftOperationsContent() {
   const [dip, setDip] = useState({ tankId: '', litres: '', water: '' });
   const [test, setTest] = useState({ nozzleId: '', can: '20', measured: '', returned: true });
   const [ownUse, setOwnUse] = useState({ tankId: '', litres: '', purpose: '' });
-  const [hand, setHand] = useState({ assignmentId: '', incoming: '', totalizer: '', rollover: false });
+  const [hand, setHand] = useState({ assignmentId: '', incoming: '', totalizer: '', elec: '', reason: '', rollover: false });
 
   // ---- sales that are not cash at the pump ----
   //
@@ -252,7 +252,14 @@ export default function ShiftOperationsContent() {
       c.required('nozzle', hand.assignmentId, 'The nozzle being handed over');
       if (c.required('incoming', hand.incoming, 'Who takes over') && a && hand.incoming === a.attendantId)
         c.error('incoming', `${a.attendantName} already holds this nozzle`);
-      const v = c.number('reading', hand.totalizer, 'The meter reading at handover', { min: 0 });
+      const v = c.number('reading', hand.totalizer, 'The manual meter reading at handover', { min: 0 });
+      // (730) Both meters, and their litres within 1 L of each other.
+      const e = c.number('elec', hand.elec, 'The electronic meter reading at handover', { min: 0 });
+      if (v !== null && e !== null && a?.openingTotalizer != null && a.openingElectronic != null && !hand.rollover) {
+        const apart = (e - a.openingElectronic) - (v - a.openingTotalizer);
+        if (Math.abs(apart) > 1 && hand.reason.trim().length < 5)
+          c.error('elec', `The electronic meter shows ${(e - a.openingElectronic).toLocaleString()} L and the manual ${(v - a.openingTotalizer).toLocaleString()} L - ${apart > 0 ? '+' : ''}${apart.toFixed(2)} L apart, more than 1 L. Check both, or say why below.`);
+      }
       if (v !== null && a?.openingTotalizer != null) {
         if (v < a.openingTotalizer && !hand.rollover)
           c.error('reading', `${v.toLocaleString()} is below this nozzle's opening reading of ${a.openingTotalizer.toLocaleString()} - check it, or tick that the meter rolled over`);
@@ -307,7 +314,8 @@ export default function ShiftOperationsContent() {
           nozzleId,
           attendantId: r.attendantId,
           volumeTotalizer: r.totalizer ? Number(r.totalizer) : null,
-          electronicTotalizer: null,
+          // (730) blank: carried from the nozzle's last close, as the manual one is
+          electronicTotalizer: r.elec ? Number(r.elec) : null,
           photoUrl: null,
         }));
       // (status, code, message) -- the client's own order.
@@ -406,7 +414,7 @@ export default function ShiftOperationsContent() {
             </p>
             <div className="space-y-2">
               {nozzles.map((n) => (
-                <div key={n.id} className="grid gap-2" style={{ gridTemplateColumns: '1fr 1.4fr 1fr' }}>
+                <div key={n.id} className="grid gap-2" style={{ gridTemplateColumns: '1fr 1.4fr 1fr 1fr' }}>
                   <span className="text-xs self-center">
                     {n.parentCode ? `${n.parentCode} · ` : ''}{n.code}
                   </span>
@@ -422,11 +430,18 @@ export default function ShiftOperationsContent() {
                     ))}
                   </select>
                   <input
-                    type="number" min={0} placeholder="Totalizer" className="input-field text-xs text-right"
+                    type="number" min={0} placeholder="Manual" aria-label="Manual meter" className="input-field text-xs text-right"
                     style={fieldStyle(openIssues, `roster:${n.id}`, openTried)}
                     value={roster[n.id]?.totalizer ?? ''}
                     onChange={(e) =>
-                      setRoster((p) => ({ ...p, [n.id]: { attendantId: p[n.id]?.attendantId ?? '', totalizer: e.target.value } }))}
+                      setRoster((p) => ({ ...p, [n.id]: { ...p[n.id], attendantId: p[n.id]?.attendantId ?? '', totalizer: e.target.value } }))}
+                  />
+                  <input
+                    type="number" min={0} placeholder="Electronic" aria-label="Electronic meter" className="input-field text-xs text-right"
+                    title="Blank carries the electronic reading from this nozzle's last close. Its first ever opening must be read."
+                    value={roster[n.id]?.elec ?? ''}
+                    onChange={(e) =>
+                      setRoster((p) => ({ ...p, [n.id]: { ...p[n.id], attendantId: p[n.id]?.attendantId ?? '', totalizer: p[n.id]?.totalizer ?? '', elec: e.target.value } }))}
                   />
                   <div style={{ gridColumn: '1 / -1' }}><FieldIssues issues={openIssues} field={`roster:${n.id}`} tried={openTried} /></div>
                 </div>
@@ -649,8 +664,14 @@ export default function ShiftOperationsContent() {
                   <option key={a.id} value={a.id}>{a.fullName} ({a.employeeNo})</option>
                 ))}
               </select>
-              <input type="number" min={0} placeholder="Totalizer at handover" className="input-field w-full text-xs"
+              <input type="number" min={0} placeholder="Manual meter at handover" className="input-field w-full text-xs"
                      value={hand.totalizer} onChange={(e) => setHand({ ...hand, totalizer: e.target.value })} />
+              <input type="number" min={0} placeholder="Electronic meter at handover" className="input-field w-full text-xs"
+                     aria-label="Electronic meter at handover"
+                     value={hand.elec} onChange={(e) => setHand({ ...hand, elec: e.target.value })} />
+              <input className="input-field w-full text-xs" aria-label="Why the two meters differ"
+                     placeholder="Only if the meters differ by more than 1 L: why"
+                     value={hand.reason} onChange={(e) => setHand({ ...hand, reason: e.target.value })} />
               <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-foreground)' }}>
                 <input type="checkbox" checked={hand.rollover} onChange={(e) => setHand({ ...hand, rollover: e.target.checked })} />
                 The meter rolled over past its maximum since this nozzle opened
@@ -669,8 +690,9 @@ export default function ShiftOperationsContent() {
                     assignmentId: hand.assignmentId,
                     incomingAttendantId: hand.incoming,
                     volumeTotalizer: Number(hand.totalizer),
-                    electronicTotalizer: null, photoUrl: null,
+                    electronicTotalizer: Number(hand.elec), photoUrl: null,
                     isRollover: hand.rollover,
+                    differenceReason: hand.reason.trim() || null,
                   }, { idempotencyKey: `hand-${hand.assignmentId}-${hand.totalizer}` }));
                 }}
               >

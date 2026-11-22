@@ -18,9 +18,19 @@ public record RecordDip(Guid TankId, string Context, decimal ProductLitres,
     decimal? WaterLitres, decimal? DipMm, decimal? WaterDipMm,
     decimal? TemperatureC, string? PhotoUrl);
 
+/// <summary>Dapper target: an assignment's opening, both meters, and the tolerance.</summary>
+public sealed class OpeningPair
+{
+    public decimal? Volume { get; set; }
+    public decimal? Electronic { get; set; }
+    public decimal Tolerance { get; set; }
+}
+
+/// <summary>Both meters are read at a handover (730), and the outgoing
+/// holder's litres on each must agree to within 1 L -- or a reason is given.</summary>
 public record HandoverRequest(Guid AssignmentId, Guid IncomingAttendantId,
     decimal VolumeTotalizer, decimal? ElectronicTotalizer, string? PhotoUrl,
-    bool IsRollover = false);
+    bool IsRollover = false, string? DifferenceReason = null);
 
 /// <summary>Dapper target: a class with settable properties, so Dapper
 /// assigns column by column instead of matching a whole constructor.
@@ -282,9 +292,31 @@ public sealed class ForecourtService
             // A reading below the opening is a TYPO unless the supervisor says the
             // meter rolled over (470). Caught here, while it can be corrected --
             // the outgoing attendant is billed on this reading at close.
-            var opening = await conn.QuerySingleOrDefaultAsync<decimal?>(new CommandDefinition(
-                "SELECT volume_totalizer FROM meter_reading WHERE assignment_id = @id AND is_opening",
+            var open = await conn.QuerySingleOrDefaultAsync<OpeningPair>(new CommandDefinition(
+                """
+                SELECT mr.volume_totalizer AS Volume, mr.electronic_totalizer AS Electronic,
+                       p.meter_pair_tolerance_litres AS Tolerance
+                  FROM meter_reading mr JOIN tenant_policy p ON p.tenant_id = mr.tenant_id
+                 WHERE mr.assignment_id = @id AND mr.is_opening
+                """,
                 new { id = outgoing.Id }, transaction: _uow.Transaction, cancellationToken: ct));
+            var opening = open?.Volume;
+
+            // (730) Both meters, here as at the close, while it can still be put right.
+            if (req.ElectronicTotalizer is null)
+                throw new DomainException("ELECTRONIC_READING_REQUIRED",
+                    "Read the electronic meter as well as the manual one: both are recorded at every handover.", 422);
+            if (open?.Electronic is not null && opening is not null && !req.IsRollover)
+            {
+                var manual = req.VolumeTotalizer - opening.Value;
+                var electronic = req.ElectronicTotalizer.Value - open.Electronic.Value;
+                if (Math.Abs(electronic - manual) > open.Tolerance && string.IsNullOrWhiteSpace(req.DifferenceReason))
+                    throw new DomainException("METER_PAIR_DISAGREES",
+                        $"The electronic meter shows {electronic:0.###} L and the manual {manual:0.###} L for this holding, " +
+                        $"{electronic - manual:+0.###;-0.###} L apart (at most {open.Tolerance:0.##} L). Check both readings; " +
+                        "if they are right, give the reason and the shift goes to the manager flagged.", 422);
+            }
+
             if (!req.IsRollover && opening is not null && req.VolumeTotalizer < opening)
                 throw new DomainException("METER_BACKWARDS",
                     $"The handover reading {req.VolumeTotalizer} is below this nozzle's opening reading " +
@@ -296,11 +328,11 @@ public sealed class ForecourtService
                 INSERT INTO meter_reading
                   (tenant_id, site_id, nozzle_id, shift_id, assignment_id, is_opening,
                    source, volume_totalizer, electronic_totalizer, photo_url, evidence,
-                   recorded_by, captured_at, is_rollover)
+                   recorded_by, captured_at, is_rollover, difference_reason)
                 VALUES (@tenant, @site, @nozzle, @shift, @assignment, false, 'MANUAL',
                         @volume, @electronic, @photo,
                         CASE WHEN @photo IS NULL THEN 'PENDING' ELSE 'PRESENT' END::evidence_state,
-                        @actor, now(), @rollover)
+                        @actor, now(), @rollover, @reason)
                 """,
                 new
                 {
@@ -308,7 +340,8 @@ public sealed class ForecourtService
                     nozzle = outgoing.NozzleId, shift = outgoing.ShiftId,
                     assignment = outgoing.Id, volume = req.VolumeTotalizer,
                     electronic = req.ElectronicTotalizer, photo = req.PhotoUrl,
-                    actor = _user.StaffId, rollover = req.IsRollover
+                    actor = _user.StaffId, rollover = req.IsRollover,
+                    reason = string.IsNullOrWhiteSpace(req.DifferenceReason) ? null : req.DifferenceReason.Trim()
                 },
                 transaction: _uow.Transaction, cancellationToken: ct));
 

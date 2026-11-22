@@ -37,6 +37,8 @@ interface Nozzle {
   closeElec: number;
   openManual: number;
   closeManual: number;
+  /** Why the two meters differ by more than 1 L (730): sends the close to the manager flagged. */
+  meterReason?: string;
   /** The nozzle itself. `id` is the ASSIGNMENT -- what the close is keyed by. */
   nozzleId?: string;
   /**
@@ -138,10 +140,9 @@ const GRADE_COLOUR: Record<string, string> = {
  * is its own meter event. The nozzle's own id is kept alongside, because a
  * return to tank is recorded against the nozzle.
  *
- * The OPENING electronic reading is deliberately 0 here. The server holds only
- * the mechanical opening in this view, and the schema is explicit that the two
- * heads' absolute values legitimately differ -- only their deltas compare. v1
- * seeded one from the other and reported drift that did not exist.
+ * Both OPENING readings come from the server (730): each carried from the
+ * nozzle's last close. The two heads' absolute values legitimately differ --
+ * only their litres compare, and they must agree to within 1 L.
  */
 function toClosurePumps(asg: AssignmentView[], shiftTanks: TankView[]): Pump[] {
   const tankFor = (product: string) =>
@@ -164,7 +165,7 @@ function toClosurePumps(asg: AssignmentView[], shiftTanks: TankView[]): Pump[] {
       grade: a.productCode,
       gradeColor: GRADE_COLOUR[a.productCode] ?? '#64748B',
       tankId: tankFor(a.productCode),
-      openElec: 0,
+      openElec: a.openingElectronic ?? 0,
       closeElec: 0,
       openManual: a.openingTotalizer ?? 0,
       closeManual: 0,
@@ -389,6 +390,12 @@ export default function ShiftClosureContent() {
       if (n.closeManual >= n.openManual && rollovers[n.id] === true)
         c.warn(f, `${name}: rollover is ticked, but the reading is above the opening`);
       if (n.manualSold > 30000) c.warn(f, `${name}: ${Math.round(n.manualSold).toLocaleString()} L in one shift - check the reading`);
+      // (730) the electronic meter too, its litres within 1 L of the manual's
+      if (!(n.closeElec > 0)) { c.error(f, `${name}: the closing electronic meter reading is needed - both meters are read`); continue; }
+      if (n.closeElec < n.openElec) { c.error(f, `${name}: electronic ${n.closeElec.toLocaleString()} is below its opening of ${n.openElec.toLocaleString()}`); continue; }
+      const apart = (n.closeElec - n.openElec) - n.manualSold;
+      if (rollovers[n.id] !== true && Math.abs(apart) > 1 && (n.meterReason ?? '').trim().length < 5)
+        c.error(f, `${name}: the meters are ${apart > 0 ? '+' : ''}${apart.toFixed(2)} L apart - at most 1 L. Check both readings, or say why`);
     }
     for (const t of tanks) {
       const f = `dip:${t.id}`;
@@ -481,7 +488,7 @@ export default function ShiftClosureContent() {
     // Every unallocated shilling is either zero or a named shortage with a
     // reason -- the server's rule, read from the server's answer. The old
     // check compared two constants and could not fail.
-    { label: 'Every shortage explained', ok: preview !== null && preview.cashUps.every((c) => c.isBalanced || (decl(c.staffId).shortageReason.trim().length >= 5)) },
+    { label: 'Every shortage explained', ok: preview !== null && preview.cashUps.every((c) => c.unallocated <= 0 || (decl(c.staffId).shortageReason.trim().length >= 5)) },
   ];
   const canCloseShift = accountingItems.every(i => i.ok);
 
@@ -531,6 +538,7 @@ export default function ShiftClosureContent() {
         assignmentId: n.id,
         volumeTotalizer: n.closeManual,
         electronicTotalizer: n.closeElec > 0 ? n.closeElec : null,
+        differenceReason: (n.meterReason ?? '').trim() || null,
         amountTotalizer: null,
         // Only what the supervisor ticked. This was briefly inferred from
         // closing < opening, which would have waved any mistyped reading past
@@ -612,7 +620,7 @@ export default function ShiftClosureContent() {
               nozzleId: n.nozzleId,
               attendantId: n.attendantId,
               volumeTotalizer: n.closeManual,
-              electronicTotalizer: null,
+              electronicTotalizer: n.closeElec > 0 ? n.closeElec : null,   // (730) opening where it closed, both meters
               photoUrl: null,
             })),
         },
@@ -646,7 +654,7 @@ export default function ShiftClosureContent() {
       showToast(
         short.length === 0
           ? 'Every attendant balances. The shift can close.'
-          : `${short.length} attendant(s) do not balance — name the shortage or recount`,
+          : `${short.length} attendant(s) short or over — recount, or give the reason for each shortage`,
         short.length === 0 ? 'success' : 'error',
       );
     } catch (e) {
@@ -1141,23 +1149,30 @@ export default function ShiftClosureContent() {
                             </td>
                             <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--muted-foreground)' }}>{tank?.label || n.tankId}</td>
                             <td className="px-3 py-2.5">
-                              <input type="number" value={n.openElec} onChange={e => updateNozzle(pump.id, n.id, 'openElec', Number(e.target.value))} className="input-field py-1 px-2 text-xs w-28 font-mono-nums" />
+                              {/* carried from the last close; not typed here */}
+                              <span className="font-mono-nums text-xs" title="Carried from this nozzle's last close">{n.openElec.toLocaleString()}</span>
                             </td>
                             <td className="px-3 py-2.5">
                               <input type="number" value={n.closeElec} onChange={e => updateNozzle(pump.id, n.id, 'closeElec', Number(e.target.value))} className="input-field py-1 px-2 text-xs w-28 font-mono-nums" />
                             </td>
                             <td className="px-3 py-2.5 font-mono-nums text-xs font-semibold" style={{ color: 'var(--primary)' }}>{fmt(elecSold, 1)} L</td>
                             <td className="px-3 py-2.5">
-                              <input type="number" value={n.openManual} onChange={e => updateNozzle(pump.id, n.id, 'openManual', Number(e.target.value))} className="input-field py-1 px-2 text-xs w-28 font-mono-nums" />
+                              <span className="font-mono-nums text-xs" title="Carried from this nozzle's last close">{n.openManual.toLocaleString()}</span>
                             </td>
                             <td className="px-3 py-2.5">
                               <input type="number" style={fieldStyle(closeIssues, `read:${n.id}`, closeTried)} value={n.closeManual} onChange={e => updateNozzle(pump.id, n.id, 'closeManual', Number(e.target.value))} className="input-field py-1 px-2 text-xs w-28 font-mono-nums" />
                             </td>
                             <td className="px-3 py-2.5 font-mono-nums text-xs font-semibold text-foreground">{fmt(manualSold, 1)} L</td>
                             <td className="px-3 py-2.5">
-                              <span className="text-xs font-bold font-mono-nums px-2 py-0.5 rounded-full" style={{ backgroundColor: Math.abs(variance) < 0.5 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: Math.abs(variance) < 0.5 ? '#22c55e' : '#ef4444' }}>
+                              <span className="text-xs font-bold font-mono-nums px-2 py-0.5 rounded-full" style={{ backgroundColor: Math.abs(variance) <= 1 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: Math.abs(variance) <= 1 ? '#22c55e' : '#ef4444' }}>
                                 {variance >= 0 ? '+' : ''}{fmt(variance, 2)} L
                               </span>
+                              {n.closeElec > 0 && n.closeManual > 0 && Math.abs(variance) > 1 && (
+                                <input className="input-field text-xs mt-1 w-56" aria-label="Why the meters differ"
+                                       placeholder="More than 1 L apart: why? (goes to the manager)"
+                                       value={n.meterReason ?? ''}
+                                       onChange={e => updateNozzle(pump.id, n.id, 'meterReason', e.target.value)} />
+                              )}
                             </td>
                           </tr>
                         );
@@ -1172,7 +1187,7 @@ export default function ShiftClosureContent() {
               {[
                 { label: 'Total Elec. Sold', value: `${fmt(totalElecSold, 1)} L`, color: 'var(--primary)' },
                 { label: 'Total Manual Sold', value: `${fmt(totalManualSold, 1)} L`, color: 'var(--foreground)' },
-                { label: 'Total Variance', value: `${totalMeterVariance >= 0 ? '+' : ''}${fmt(totalMeterVariance, 2)} L`, color: Math.abs(totalMeterVariance) < 1 ? '#22c55e' : '#ef4444' },
+                { label: 'Total Variance', value: `${totalMeterVariance >= 0 ? '+' : ''}${fmt(totalMeterVariance, 2)} L`, color: allNozzles.every((n) => Math.abs((n.closeElec - n.openElec) - (n.closeManual - n.openManual)) <= 1) ? '#22c55e' : '#ef4444' },
               ].map(row => (
                 <div key={row.label}>
                   <p className="text-xs mb-0.5" style={{ color: 'var(--muted-foreground)' }}>{row.label}</p>
@@ -1336,14 +1351,33 @@ export default function ShiftClosureContent() {
                         </label>
                       ))}
                       {pc && (
-                        <p
-                          className="text-xs pt-2 border-t"
-                          style={{ borderColor: 'var(--border)', color: pc.isBalanced ? '#22c55e' : '#ef4444' }}
-                        >
-                          Server: owes UGX {fmt(pc.salesValue)} · declared UGX{' '}
-                          {fmt(pc.cashDeclared + pc.electronicDeclared)} ·{' '}
-                          {pc.isBalanced ? 'balances' : `UGX ${fmt(pc.unallocated)} unaccounted for`}
-                        </p>
+                        // (730) The statement, from the meters to the cash in hand. Every
+                        // line is the server's, from the close it would make.
+                        <div className="text-xs pt-2 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }} data-statement={pc.staffId}>
+                          {[
+                            ['Metered (manual)', `${fmt(pc.meteredLitres, 1)} L`],
+                            ['less pump tests, own use, returned to tank', `-${fmt(pc.testLitres + pc.ownUseLitres + pc.returnedLitres, 1)} L`],
+                            ['= litres sold', `${fmt(pc.soldLitres, 1)} L`],
+                            ['Fuel sold', `UGX ${fmt(pc.fuelValue)}`],
+                            ['+ shop sales', `UGX ${fmt(pc.shopValue)}`],
+                            ['- mobile money', `UGX ${fmt(pc.mobileMoney)}`],
+                            ['- card and vouchers', `UGX ${fmt(pc.cardAndVouchers)}`],
+                            ['- credit sales', `UGX ${fmt(pc.creditTotal)}`],
+                            ['- agreed prices', `UGX ${fmt(pc.agreedPrices)}`],
+                            ['- discounts', `UGX ${fmt(pc.discountTotal)}`],
+                            ['- dropped in the safe', `UGX ${fmt(pc.cashDropped)}`],
+                            ['= cash expected now', `UGX ${fmt(pc.expectedCash)}`],
+                            ['cash counted', `UGX ${fmt(pc.cashAtClose)}`],
+                          ].map(([k, v]) => (
+                            <div key={k} className="flex justify-between" style={{ color: k.startsWith('=') ? 'var(--foreground)' : 'var(--muted-foreground)', fontWeight: k.startsWith('=') ? 600 : 400 }}>
+                              <span>{k}</span><span className="font-mono-nums">{v}</span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between font-bold pt-1" style={{ color: pc.isBalanced ? '#22c55e' : '#ef4444' }}>
+                            <span>{pc.isBalanced ? 'Balances' : pc.unallocated > 0 ? 'Short' : 'Over'}</span>
+                            <span className="font-mono-nums">{pc.isBalanced ? '—' : `UGX ${fmt(Math.abs(pc.unallocated))}`}</span>
+                          </div>
+                        </div>
                       )}
                       {pc && !pc.isBalanced && (
                         <input

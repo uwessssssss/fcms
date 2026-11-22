@@ -406,6 +406,9 @@ export interface AssignmentView {
   /** Carried from the last close. The close is closing minus this. */
   openingTotalizer: number | null;
   closingTotalizer: number | null;
+  /** The electronic head (730): its own total; only the litres compare. */
+  openingElectronic: number | null;
+  closingElectronic: number | null;
   grossLitres: number | null;
   divergenceLitres: number | null;
 }
@@ -437,8 +440,25 @@ export interface CashUpView {
   shortageRaised: number;
   overageRaised: number;
   /** Money the server could not account for. Must be zero, or be a named shortage. */
+  /** Short (+) or over (-) against the expected cash. */
   unallocated: number;
+  /** Handed in exactly what was owed. */
   isBalanced: boolean;
+  // the statement (730): from the meters to the cash in hand
+  meteredLitres: number;
+  testLitres: number;
+  ownUseLitres: number;
+  returnedLitres: number;
+  soldLitres: number;
+  fuelValue: number;
+  shopValue: number;
+  mobileMoney: number;
+  cardAndVouchers: number;
+  agreedPrices: number;
+  cashDropped: number;
+  cashAtClose: number;
+  /** fuel + shop - mobile money - card - credit - agreed prices - discounts - drops */
+  expectedCash: number;
 }
 
 export interface ShiftDetail {

@@ -12,6 +12,20 @@ psql -d fcms_check -f db/test/shift_math_scenario.sql   # the paths the demo nev
 
 CI runs it on the business scenarios, every simulated month and the demo.
 
+## Before a shift can close
+
+The close refuses (730) until:
+
+* every nozzle is read on **both meters**, electronic and manual, at opening,
+  handover and close -- an opening carries both from the nozzle's last close;
+* the litres on the electronic head match the manual meter's to within
+  **1 L** (`tenant_policy.meter_pair_tolerance_litres`). Beyond it the close
+  stops unless the supervisor says why; then it closes, flagged CRITICAL;
+* every tank is dipped, and no delivery is still being decanted unreceived;
+* everyone who sold has a cash-up, and **every shortage has a reason**. The
+  preview shows a shortage without one, so the supervisor learns who is short
+  before being asked why.
+
 ## The arithmetic
 
 Per attendant's holding of a nozzle (from assignment to handover or close):
@@ -22,7 +36,20 @@ Per attendant's holding of a nozzle (from assignment to handover or close):
 | litres sold | metered - pump tests - own use - returned to tank, each counted in that holding's window |
 | fuel owed | each sale line: round(litres sold x the shift's captured price, 2) |
 
-Per attendant's cash-up:
+Per attendant's cash-up, as the close screen shows it:
+
+```
+metered (manual meter)
+  - pump tests - own use - returned to tank   = litres sold
+litres sold x price                           = fuel sold
+fuel sold + shop sales
+  - mobile money - card and vouchers
+  - credit sales - agreed-price differences
+  - discounts - cash dropped in the safe      = cash expected at close
+cash expected - cash counted                  = short (+) or over (-)
+```
+
+Returns to tank are LITRES: they come off before pricing, never off the cash.
 
 ```
 owed     = fuel owed + shop sales they made
@@ -52,11 +79,11 @@ of litres sold, and outside what a dipstick can read (stations: the noise
 floor; depot days: no floor, percentage of the day's loads by the depot's own
 clock).
 
-## The 25 rules
+## The 26 rules
 
 | | |
 |---|---|
-| M1-M4 | every holding has both readings and one meter event; litres = closing - opening; a reading below its opening only as a ticked rollover; each holding opens where the last closed |
+| M1-M5 | every holding has both readings and one meter event; litres = closing - opening; a reading below its opening only as a ticked rollover; each holding opens where the last closed; the electronic head's litres match the manual meter's to within 1 L, or a CRITICAL flag carries the reason |
 | D1-D3 | every litre classified; sold = metered - tests - own use - returns; each classified to the litre |
 | P1-P2 | priced at the shift's captured price; a price for everything sold |
 | K1 | credit: litres x unit price; pump price = the shift's; no agreement means pump price |

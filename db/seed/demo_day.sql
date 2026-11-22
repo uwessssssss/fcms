@@ -70,10 +70,10 @@ SELECT fn_open_shift(
     jsonb_build_object('tank_id', :t_pms, 'product_litres', 12397.6, 'water_litres', 0),
     jsonb_build_object('tank_id', :t_ago, 'product_litres', 18897.6, 'water_litres', 0)),
   jsonb_build_array(
-    jsonb_build_object('nozzle_id', :n1, 'attendant_id', :att1, 'volume_totalizer', 482350),
-    jsonb_build_object('nozzle_id', :n2, 'attendant_id', :att2, 'volume_totalizer', 391870),
-    jsonb_build_object('nozzle_id', :n3, 'attendant_id', :att3, 'volume_totalizer', 275940),
-    jsonb_build_object('nozzle_id', :n4, 'attendant_id', :att4, 'volume_totalizer', 512610))
+    jsonb_build_object('nozzle_id', :n1, 'attendant_id', :att1, 'volume_totalizer', 482350, 'electronic_totalizer', 482350),
+    jsonb_build_object('nozzle_id', :n2, 'attendant_id', :att2, 'volume_totalizer', 391870, 'electronic_totalizer', 391870),
+    jsonb_build_object('nozzle_id', :n3, 'attendant_id', :att3, 'volume_totalizer', 275940, 'electronic_totalizer', 275940),
+    jsonb_build_object('nozzle_id', :n4, 'attendant_id', :att4, 'volume_totalizer', 512610, 'electronic_totalizer', 512610))
 ) AS day_shift_id \gset
 
 \echo 'Opened day shift'
@@ -227,6 +227,8 @@ SELECT fn_close_shift(
   (SELECT jsonb_agg(jsonb_build_object(
             'assignment_id', na.id,
             'volume_totalizer',
+              CASE n.code WHEN 'N1' THEN 483170 WHEN 'N2' THEN 392590
+                          WHEN 'N3' THEN 276585.5 ELSE 513050 END, 'electronic_totalizer',
               CASE n.code WHEN 'N1' THEN 483170 WHEN 'N2' THEN 392590
                           WHEN 'N3' THEN 276585.5 ELSE 513050 END,
             'is_rollover', false))
