@@ -1,0 +1,2216 @@
+{
+ "checks": [
+  {
+   "area": "api",
+   "name": "GET /health answers 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "area": "api",
+   "name": "who am I, signed out: 401",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "api",
+   "name": "the books, signed out: 401",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "api",
+   "name": "the dashboard, signed out: 401",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "api",
+   "name": "wrong password: 401 INVALID_CREDENTIALS",
+   "ok": true,
+   "detail": "401 {\"code\":\"INVALID_CREDENTIALS\",\"message\":\"That employee number or password is not right.\",\"detail\":null,\"traceId\":\"0HNQ8P"
+  },
+  {
+   "area": "api",
+   "name": "unknown employee: the same 401 (no enumeration)",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "api",
+   "name": "an attendant has no sign-in",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "api",
+   "name": "head office signs in",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "area": "api",
+   "name": "the token works: role HEAD_OFFICE",
+   "ok": true,
+   "detail": "200 HEAD_OFFICE"
+  },
+  {
+   "area": "api",
+   "name": "a tampered token is refused",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "api",
+   "name": "a supervisor is refused the books (403)",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "area": "api",
+   "name": "sign-in is rate-limited: the 11th try from one address gets 429",
+   "ok": true,
+   "detail": "401,401,401,401,401,401,401,401,401,401,429"
+  },
+  {
+   "area": "api",
+   "name": "another address still signs in",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "area": "browser",
+   "name": "signed out, the dashboard sends you to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "a wrong password says so, and stays on sign-in",
+   "ok": true,
+   "detail": "That employee number and password do not match."
+  },
+  {
+   "area": "browser",
+   "name": "HO01 signs in and lands on /",
+   "ok": true,
+   "detail": "/"
+  },
+  {
+   "area": "browser",
+   "name": "HO01's sidebar offers screens",
+   "ok": true,
+   "detail": "27: / /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports /reports /users /administration /system-customisation"
+  },
+  {
+   "area": "browser",
+   "name": "HO01 signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "SYSADMIN signs in and lands on /",
+   "ok": true,
+   "detail": "/"
+  },
+  {
+   "area": "browser",
+   "name": "SYSADMIN's sidebar offers screens",
+   "ok": true,
+   "detail": "28: / /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports /reports /companies /users /administration /system-customisation"
+  },
+  {
+   "area": "browser",
+   "name": "SYSADMIN signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "AUD01 signs in and lands on /",
+   "ok": true,
+   "detail": "/"
+  },
+  {
+   "area": "browser",
+   "name": "AUD01's sidebar offers screens",
+   "ok": true,
+   "detail": "27: / /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports /reports /users /administration /system-customisation"
+  },
+  {
+   "area": "browser",
+   "name": "AUD01 signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "MGR01 signs in and lands on /site-operations-detail",
+   "ok": true,
+   "detail": "/site-operations-detail"
+  },
+  {
+   "area": "browser",
+   "name": "MGR01's sidebar offers screens",
+   "ok": true,
+   "detail": "22: /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports"
+  },
+  {
+   "area": "browser",
+   "name": "MGR01 signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "SUP01 signs in and lands on /site-operations-detail",
+   "ok": true,
+   "detail": "/site-operations-detail"
+  },
+  {
+   "area": "browser",
+   "name": "SUP01's sidebar offers screens",
+   "ok": true,
+   "detail": "11: /site-operations-detail /shift-operations /inventory/tanks /other-stocks /stock-counts /pump-setup /pump-attendants /shift-closure /shift-closure/reports /credit-customers /depot"
+  },
+  {
+   "area": "browser",
+   "name": "SUP01 signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "ACC01 signs in and lands on /site-operations-detail",
+   "ok": true,
+   "detail": "/site-operations-detail"
+  },
+  {
+   "area": "browser",
+   "name": "ACC01's sidebar offers screens",
+   "ok": true,
+   "detail": "22: /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports"
+  },
+  {
+   "area": "browser",
+   "name": "ACC01 signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "browser",
+   "name": "DEP01 signs in and lands on /site-operations-detail",
+   "ok": true,
+   "detail": "/site-operations-detail"
+  },
+  {
+   "area": "browser",
+   "name": "DEP01's sidebar offers screens",
+   "ok": true,
+   "detail": "22: /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports"
+  },
+  {
+   "area": "browser",
+   "name": "DEP01 signs out, and the books then send to sign-in",
+   "ok": true,
+   "detail": "http://localhost:3000/sign-up-login-screen"
+  },
+  {
+   "area": "password",
+   "name": "Set my password goes on to the home screen",
+   "ok": true,
+   "detail": "/site-operations-detail "
+  },
+  {
+   "area": "password",
+   "name": "after a change the old password is refused",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "area": "password",
+   "name": "and the new one signs in",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "area": "password",
+   "name": "the original password is put back afterwards",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "area": "fields",
+   "name": "every response has the fields its screen reads (141 contracts)",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "pages": [
+  {
+   "user": "HO01",
+   "route": "/",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__home.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__site-operations-detail.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-operations.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__inventory-tanks.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/inventory/deliveries",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__inventory-deliveries.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__other-stocks.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/products",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__products.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__stock-counts.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/stock-counts",
+   "tab": "Shop and lubricants",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__stock-counts__shop-and-lubricants.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/stock-counts",
+   "tab": "Adjustments",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__stock-counts__adjustments.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__pump-setup.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__pump-attendants.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/attendant-shorts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__attendant-shorts.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-closure.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-closure-reports.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-closure/reports",
+   "tab": "Gain / Loss",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-closure-reports__gain-loss.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-closure/reports",
+   "tab": "Sales & Payments",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-closure-reports__sales-payments.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-closure/reports",
+   "tab": "Variances",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-closure-reports__variances.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/shift-closure/reports",
+   "tab": "Statement",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__shift-closure-reports__statement.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/expenses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__expenses.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/suppliers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__suppliers.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__credit-customers.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/credit-customers",
+   "tab": "Transactions",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__credit-customers__transactions.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/payments",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__payments.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/payments",
+   "tab": "Provider Summary",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__payments__provider-summary.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/other-income",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__other-income.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__depot.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/books",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__books.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/books",
+   "tab": "Bank & mobile money",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__books__bank-mobile-money.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/books",
+   "tab": "Receivables",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__books__receivables.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/books",
+   "tab": "Profit & loss",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__books__profit-loss.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/books",
+   "tab": "Journals",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__books__journals.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/books",
+   "tab": "Account ledger",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__books__account-ledger.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Daily Statement",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__daily-statement.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Weekly Summary",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__weekly-summary.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Monthly Report",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__monthly-report.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Shift Reports",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__shift-reports.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Gain / Loss",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__gain-loss.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Stock Movement",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__stock-movement.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Dipping Report",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__dipping-report.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Expenses Report",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__expenses-report.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Credit Statement",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__credit-statement.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Payments Breakdown",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__payments-breakdown.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Variances Report",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__variances-report.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/full-reports",
+   "tab": "Pump Performance",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__full-reports__pump-performance.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/losses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__losses.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/losses",
+   "tab": "Meter divergence",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__losses__meter-divergence.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "Loss trend",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports__loss-trend.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "Attendants",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports__attendants.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "Stock card",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports__stock-card.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "Depot vs station",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports__depot-vs-station.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "Duty periods",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports__duty-periods.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/management-reports",
+   "tab": "By shift",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__management-reports__by-shift.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__reports.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/users",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__users.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/administration",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__administration.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/administration",
+   "tab": "Payment channels",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__administration__payment-channels.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/administration",
+   "tab": "Tank calibration",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__administration__tank-calibration.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/administration",
+   "tab": "Depot",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/ho01__administration__depot.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/system-customisation",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/admin/audit 403"
+   ],
+   "display": [],
+   "shot": "shots/ho01__system-customisation.png"
+  },
+  {
+   "user": "HO01",
+   "route": "/companies",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/v1/organisation/companies 403"
+   ],
+   "display": [],
+   "shot": "shots/ho01__companies.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__home.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__site-operations-detail.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__shift-operations.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__inventory-tanks.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/inventory/deliveries",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__inventory-deliveries.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__other-stocks.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/products",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__products.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__stock-counts.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__pump-setup.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__pump-attendants.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/attendant-shorts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__attendant-shorts.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__shift-closure.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__shift-closure-reports.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/expenses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__expenses.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/suppliers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__suppliers.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__credit-customers.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/payments",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__payments.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/other-income",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__other-income.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__depot.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/books",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__books.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/full-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__full-reports.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/losses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__losses.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/management-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__management-reports.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__reports.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/companies",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__companies.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/users",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__users.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/administration",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__administration.png"
+  },
+  {
+   "user": "SYSADMIN",
+   "route": "/system-customisation",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sysadmin__system-customisation.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__home.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__site-operations-detail.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__shift-operations.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__inventory-tanks.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/inventory/deliveries",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__inventory-deliveries.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__other-stocks.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/products",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__products.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__stock-counts.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__pump-setup.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__pump-attendants.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/attendant-shorts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__attendant-shorts.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__shift-closure.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__shift-closure-reports.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/expenses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/statements/expenses 403"
+   ],
+   "display": [],
+   "shot": "shots/aud01__expenses.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/suppliers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__suppliers.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__credit-customers.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/payments",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__payments.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/other-income",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__other-income.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__depot.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/books",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__books.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/full-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__full-reports.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/losses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__losses.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/management-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__management-reports.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__reports.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/users",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/aud01__users.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/administration",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/admin/policy 403"
+   ],
+   "display": [],
+   "shot": "shots/aud01__administration.png"
+  },
+  {
+   "user": "AUD01",
+   "route": "/system-customisation",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/admin/sessions 403"
+   ],
+   "display": [],
+   "shot": "shots/aud01__system-customisation.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__site-operations-detail.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__shift-operations.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__inventory-tanks.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/inventory/deliveries",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__inventory-deliveries.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__other-stocks.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/products",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__products.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__stock-counts.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__pump-setup.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__pump-attendants.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/attendant-shorts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__attendant-shorts.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__shift-closure.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__shift-closure-reports.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/expenses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__expenses.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/suppliers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__suppliers.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__credit-customers.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/payments",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__payments.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/other-income",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__other-income.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__depot.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/books",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__books.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/full-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__full-reports.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/losses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__losses.png"
+  },
+  {
+   "user": "MGR01",
+   "route": "/management-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/mgr01__management-reports.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__site-operations-detail.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__shift-operations.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__inventory-tanks.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__other-stocks.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__stock-counts.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__pump-setup.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__pump-attendants.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__shift-closure.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/sup01__shift-closure-reports.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/credit/ageing 403"
+   ],
+   "display": [],
+   "shot": "shots/sup01__credit-customers.png"
+  },
+  {
+   "user": "SUP01",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [
+    "GET /api/depot/below-cost 403"
+   ],
+   "display": [],
+   "shot": "shots/sup01__depot.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__site-operations-detail.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__shift-operations.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__inventory-tanks.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/inventory/deliveries",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__inventory-deliveries.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__other-stocks.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/products",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__products.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__stock-counts.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__pump-setup.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__pump-attendants.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/attendant-shorts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__attendant-shorts.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__shift-closure.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__shift-closure-reports.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/expenses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__expenses.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/suppliers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__suppliers.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__credit-customers.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/payments",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__payments.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/other-income",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__other-income.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__depot.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/books",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__books.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/full-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__full-reports.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/losses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__losses.png"
+  },
+  {
+   "user": "ACC01",
+   "route": "/management-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/acc01__management-reports.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/site-operations-detail",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__site-operations-detail.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/shift-operations",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__shift-operations.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/inventory/tanks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__inventory-tanks.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/inventory/deliveries",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__inventory-deliveries.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/other-stocks",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__other-stocks.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/products",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__products.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/stock-counts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__stock-counts.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/pump-setup",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__pump-setup.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/pump-attendants",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__pump-attendants.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/attendant-shorts",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__attendant-shorts.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/shift-closure",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__shift-closure.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/shift-closure/reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__shift-closure-reports.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/expenses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__expenses.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/suppliers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__suppliers.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/credit-customers",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__credit-customers.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/payments",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__payments.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/other-income",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__other-income.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/depot",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__depot.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/books",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__books.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/full-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__full-reports.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/losses",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__losses.png"
+  },
+  {
+   "user": "DEP01",
+   "route": "/management-reports",
+   "tab": "",
+   "ok": true,
+   "issues": [],
+   "forbidden": [],
+   "display": [],
+   "shot": "shots/dep01__management-reports.png"
+  }
+ ]
+}

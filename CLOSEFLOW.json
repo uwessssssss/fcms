@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Shift Operations offers to open a shift",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "the shift opens with no meter totals typed",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "both meters were carried into the opening",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "the handover is recorded on both meters",
+    "ok": true,
+    "detail": "200 {\"assignmentId\":\"4f029dca-61da-4ec2-9b09-c00e3269c335\"}; 2 holdings on the nozzle"
+  },
+  {
+    "name": "the close lists every nozzle held now",
+    "ok": true,
+    "detail": "2 rows"
+  },
+  {
+    "name": "the meter difference shows on screen, inside 1 L",
+    "ok": true,
+    "detail": "+0.30 L"
+  },
+  {
+    "name": "each attendant's statement shows the cash expected",
+    "ok": true,
+    "detail": "Alice Nabirye: 77550; Moses Kato: 77550; Peter Ssali: 76050"
+  },
+  {
+    "name": "handing in nothing reads as short, not balanced",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "handing in exactly the expected cash balances every attendant",
+    "ok": true,
+    "detail": "3 of 3"
+  },
+  {
+    "name": "the confirm shows the server's gain/loss, handover included",
+    "ok": true,
+    "detail": "Gain/Loss\n+0.00"
+  },
+  {
+    "name": "the shift closes from the screen",
+    "ok": true,
+    "detail": "DECLARED"
+  },
+  {
+    "name": "nobody is short or over",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "every holding records both meters, within 1 L",
+    "ok": true,
+    "detail": "0.300,0.300,0.200"
+  },
+  {
+    "name": "no screen crashed on the way",
+    "ok": true,
+    "detail": ""
+  }
+]

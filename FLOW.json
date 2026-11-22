@@ -1,0 +1,137 @@
+[
+  {
+    "name": "a supervisor opens a shift",
+    "ok": true,
+    "detail": "200  "
+  },
+  {
+    "name": "the opening carries both meters from the last close",
+    "ok": true,
+    "detail": "manual 237026.2 (last close 237026.2), electronic 428615.78 (last close 428615.78)"
+  },
+  {
+    "name": "the shift shows both opening meters",
+    "ok": true,
+    "detail": "237026.2 / 428615.78"
+  },
+  {
+    "name": "a handover without the electronic meter is refused",
+    "ok": true,
+    "detail": "422 ELECTRONIC_READING_REQUIRED"
+  },
+  {
+    "name": "a handover with the meters 2 L apart is refused",
+    "ok": true,
+    "detail": "422 METER_PAIR_DISAGREES"
+  },
+  {
+    "name": "a handover with the meters 0.4 L apart goes through",
+    "ok": true,
+    "detail": "200  "
+  },
+  {
+    "name": "the incoming attendant opens on both handover readings",
+    "ok": true,
+    "detail": "237046.2 / 428636.18"
+  },
+  {
+    "name": "the preview runs with nobody's shortage explained",
+    "ok": true,
+    "detail": "200  "
+  },
+  {
+    "name": "the preview shows each attendant short, not balanced",
+    "ok": true,
+    "detail": "Alice Nabirye: short 103400, balanced false; Moses Kato: short 103400, balanced false; Peter Ssali: short 101400, balanced false"
+  },
+  {
+    "name": "each preview statement adds up, meters to cash",
+    "ok": true,
+    "detail": "Alice Nabirye: 20 L, expects 103400; Moses Kato: 20 L, expects 103400; Peter Ssali: 20 L, expects 101400"
+  },
+  {
+    "name": "the preview left nothing behind",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "a close with shortages unexplained is refused",
+    "ok": true,
+    "detail": "422 SHORTAGE_NEEDS_REASON"
+  },
+  {
+    "name": "a close with the meters 3 L apart and no reason is refused",
+    "ok": true,
+    "detail": "422 METER_PAIR_DISAGREES"
+  },
+  {
+    "name": "with the reasons given, it closes",
+    "ok": true,
+    "detail": "200  "
+  },
+  {
+    "name": "the 3 L goes to the manager, CRITICAL, with its reason",
+    "ok": true,
+    "detail": "CRITICAL / 3.000 / Electronic head sticking, technician called"
+  },
+  {
+    "name": "each shortage carries its reason",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "head office must say which station",
+    "ok": true,
+    "detail": "422 SITE_REQUIRED"
+  },
+  {
+    "name": "head office appoints to the station it names",
+    "ok": true,
+    "detail": "200 "
+  },
+  {
+    "name": "an auditor belongs to the head office, whatever is sent",
+    "ok": true,
+    "detail": "200 "
+  },
+  {
+    "name": "a station manager cannot appoint at another site",
+    "ok": true,
+    "detail": "403 OWN_SITE_ONLY"
+  },
+  {
+    "name": "a station manager appoints to their own station",
+    "ok": true,
+    "detail": "200 "
+  },
+  {
+    "name": "head office cannot appoint head office",
+    "ok": true,
+    "detail": "403 MAY_NOT_APPOINT_THIS_ROLE"
+  },
+  {
+    "name": "a system administrator appoints head office, at the head office",
+    "ok": true,
+    "detail": "200 "
+  },
+  {
+    "name": "nobody can appoint a director",
+    "ok": true,
+    "detail": "422 NO_DIRECTOR"
+  },
+  {
+    "name": "a depot manager cannot read a station shift",
+    "ok": true,
+    "detail": "403 OTHER_STATION"
+  },
+  {
+    "name": "the depot manager's pack holds only the depot",
+    "ok": true,
+    "detail": "200 Kiboga Depot"
+  },
+  {
+    "name": "head office's pack holds every site",
+    "ok": true,
+    "detail": "2 sites"
+  }
+]

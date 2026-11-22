@@ -1,0 +1,239 @@
+PASS  api: GET /health answers 200 -- 200
+PASS  api: who am I, signed out: 401 -- 401
+PASS  api: the books, signed out: 401 -- 401
+PASS  api: the dashboard, signed out: 401 -- 401
+PASS  api: wrong password: 401 INVALID_CREDENTIALS -- 401 {"code":"INVALID_CREDENTIALS","message":"That employee number or password is not right.","detail":null,"traceId":"0HNQ8P
+PASS  api: unknown employee: the same 401 (no enumeration) -- 401
+PASS  api: an attendant has no sign-in -- 401
+PASS  api: head office signs in -- 200
+PASS  api: the token works: role HEAD_OFFICE -- 200 HEAD_OFFICE
+PASS  api: a tampered token is refused -- 401
+PASS  api: a supervisor is refused the books (403) -- 403
+PASS  api: sign-in is rate-limited: the 11th try from one address gets 429 -- 401,401,401,401,401,401,401,401,401,401,429
+PASS  api: another address still signs in -- 200
+PASS  browser: signed out, the dashboard sends you to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: a wrong password says so, and stays on sign-in -- That employee number and password do not match.
+PASS  browser: HO01 signs in and lands on / -- /
+PASS  browser: HO01's sidebar offers screens -- 27: / /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports /reports /users /administration /system-customisation
+ok    HO01 /
+ok    HO01 /site-operations-detail
+ok    HO01 /shift-operations
+ok    HO01 /inventory/tanks
+ok    HO01 /inventory/deliveries
+ok    HO01 /other-stocks
+ok    HO01 /products
+ok    HO01 /stock-counts
+ok    HO01 /stock-counts > Shop and lubricants
+ok    HO01 /stock-counts > Adjustments
+ok    HO01 /pump-setup
+ok    HO01 /pump-attendants
+ok    HO01 /attendant-shorts
+ok    HO01 /shift-closure
+note  HO01 /shift-closure: no tabs shown (nothing open here)
+ok    HO01 /shift-closure/reports
+ok    HO01 /shift-closure/reports > Gain / Loss
+ok    HO01 /shift-closure/reports > Sales & Payments
+ok    HO01 /shift-closure/reports > Variances
+ok    HO01 /shift-closure/reports > Statement
+ok    HO01 /expenses
+ok    HO01 /suppliers
+ok    HO01 /credit-customers
+ok    HO01 /credit-customers > Transactions
+ok    HO01 /payments
+ok    HO01 /payments > Provider Summary
+ok    HO01 /other-income
+ok    HO01 /depot
+ok    HO01 /books
+ok    HO01 /books > Bank & mobile money
+ok    HO01 /books > Receivables
+ok    HO01 /books > Profit & loss
+ok    HO01 /books > Journals
+ok    HO01 /books > Account ledger
+ok    HO01 /full-reports
+ok    HO01 /full-reports > Daily Statement
+ok    HO01 /full-reports > Weekly Summary
+ok    HO01 /full-reports > Monthly Report
+ok    HO01 /full-reports > Shift Reports
+ok    HO01 /full-reports > Gain / Loss
+ok    HO01 /full-reports > Stock Movement
+ok    HO01 /full-reports > Dipping Report
+ok    HO01 /full-reports > Expenses Report
+ok    HO01 /full-reports > Credit Statement
+ok    HO01 /full-reports > Payments Breakdown
+ok    HO01 /full-reports > Variances Report
+ok    HO01 /full-reports > Pump Performance
+ok    HO01 /losses
+ok    HO01 /losses > Meter divergence
+ok    HO01 /management-reports
+ok    HO01 /management-reports > Loss trend
+ok    HO01 /management-reports > Attendants
+ok    HO01 /management-reports > Stock card
+ok    HO01 /management-reports > Depot vs station
+ok    HO01 /management-reports > Duty periods
+ok    HO01 /management-reports > By shift
+ok    HO01 /reports
+ok    HO01 /users
+ok    HO01 /administration
+ok    HO01 /administration > Payment channels
+ok    HO01 /administration > Tank calibration
+ok    HO01 /administration > Depot
+ok    HO01 /system-customisation [refused: GET /api/admin/audit 403]
+ok    HO01 /companies [refused: GET /api/v1/organisation/companies 403]
+PASS  browser: HO01 signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: SYSADMIN signs in and lands on / -- /
+PASS  browser: SYSADMIN's sidebar offers screens -- 28: / /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports /reports /companies /users /administration /system-customisation
+ok    SYSADMIN /
+ok    SYSADMIN /site-operations-detail
+ok    SYSADMIN /shift-operations
+ok    SYSADMIN /inventory/tanks
+ok    SYSADMIN /inventory/deliveries
+ok    SYSADMIN /other-stocks
+ok    SYSADMIN /products
+ok    SYSADMIN /stock-counts
+ok    SYSADMIN /pump-setup
+ok    SYSADMIN /pump-attendants
+ok    SYSADMIN /attendant-shorts
+ok    SYSADMIN /shift-closure
+ok    SYSADMIN /shift-closure/reports
+ok    SYSADMIN /expenses
+ok    SYSADMIN /suppliers
+ok    SYSADMIN /credit-customers
+ok    SYSADMIN /payments
+ok    SYSADMIN /other-income
+ok    SYSADMIN /depot
+ok    SYSADMIN /books
+ok    SYSADMIN /full-reports
+ok    SYSADMIN /losses
+ok    SYSADMIN /management-reports
+ok    SYSADMIN /reports
+ok    SYSADMIN /companies
+ok    SYSADMIN /users
+ok    SYSADMIN /administration
+ok    SYSADMIN /system-customisation
+PASS  browser: SYSADMIN signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: AUD01 signs in and lands on / -- /
+PASS  browser: AUD01's sidebar offers screens -- 27: / /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports /reports /users /administration /system-customisation
+ok    AUD01 /
+ok    AUD01 /site-operations-detail
+ok    AUD01 /shift-operations
+ok    AUD01 /inventory/tanks
+ok    AUD01 /inventory/deliveries
+ok    AUD01 /other-stocks
+ok    AUD01 /products
+ok    AUD01 /stock-counts
+ok    AUD01 /pump-setup
+ok    AUD01 /pump-attendants
+ok    AUD01 /attendant-shorts
+ok    AUD01 /shift-closure
+ok    AUD01 /shift-closure/reports
+ok    AUD01 /expenses [refused: GET /api/statements/expenses 403]
+ok    AUD01 /suppliers
+ok    AUD01 /credit-customers
+ok    AUD01 /payments
+ok    AUD01 /other-income
+ok    AUD01 /depot
+ok    AUD01 /books
+ok    AUD01 /full-reports
+ok    AUD01 /losses
+ok    AUD01 /management-reports
+ok    AUD01 /reports
+ok    AUD01 /users
+ok    AUD01 /administration [refused: GET /api/admin/policy 403]
+ok    AUD01 /system-customisation [refused: GET /api/admin/sessions 403]
+PASS  browser: AUD01 signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: MGR01 signs in and lands on /site-operations-detail -- /site-operations-detail
+PASS  browser: MGR01's sidebar offers screens -- 22: /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports
+ok    MGR01 /site-operations-detail
+ok    MGR01 /shift-operations
+ok    MGR01 /inventory/tanks
+ok    MGR01 /inventory/deliveries
+ok    MGR01 /other-stocks
+ok    MGR01 /products
+ok    MGR01 /stock-counts
+ok    MGR01 /pump-setup
+ok    MGR01 /pump-attendants
+ok    MGR01 /attendant-shorts
+ok    MGR01 /shift-closure
+ok    MGR01 /shift-closure/reports
+ok    MGR01 /expenses
+ok    MGR01 /suppliers
+ok    MGR01 /credit-customers
+ok    MGR01 /payments
+ok    MGR01 /other-income
+ok    MGR01 /depot
+ok    MGR01 /books
+ok    MGR01 /full-reports
+ok    MGR01 /losses
+ok    MGR01 /management-reports
+PASS  browser: MGR01 signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: SUP01 signs in and lands on /site-operations-detail -- /site-operations-detail
+PASS  browser: SUP01's sidebar offers screens -- 11: /site-operations-detail /shift-operations /inventory/tanks /other-stocks /stock-counts /pump-setup /pump-attendants /shift-closure /shift-closure/reports /credit-customers /depot
+ok    SUP01 /site-operations-detail
+ok    SUP01 /shift-operations
+ok    SUP01 /inventory/tanks
+ok    SUP01 /other-stocks
+ok    SUP01 /stock-counts
+ok    SUP01 /pump-setup
+ok    SUP01 /pump-attendants
+ok    SUP01 /shift-closure
+ok    SUP01 /shift-closure/reports
+ok    SUP01 /credit-customers [refused: GET /api/credit/ageing 403]
+ok    SUP01 /depot [refused: GET /api/depot/below-cost 403]
+PASS  browser: SUP01 signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: ACC01 signs in and lands on /site-operations-detail -- /site-operations-detail
+PASS  browser: ACC01's sidebar offers screens -- 22: /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports
+ok    ACC01 /site-operations-detail
+ok    ACC01 /shift-operations
+ok    ACC01 /inventory/tanks
+ok    ACC01 /inventory/deliveries
+ok    ACC01 /other-stocks
+ok    ACC01 /products
+ok    ACC01 /stock-counts
+ok    ACC01 /pump-setup
+ok    ACC01 /pump-attendants
+ok    ACC01 /attendant-shorts
+ok    ACC01 /shift-closure
+ok    ACC01 /shift-closure/reports
+ok    ACC01 /expenses
+ok    ACC01 /suppliers
+ok    ACC01 /credit-customers
+ok    ACC01 /payments
+ok    ACC01 /other-income
+ok    ACC01 /depot
+ok    ACC01 /books
+ok    ACC01 /full-reports
+ok    ACC01 /losses
+ok    ACC01 /management-reports
+PASS  browser: ACC01 signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  browser: DEP01 signs in and lands on /site-operations-detail -- /site-operations-detail
+PASS  browser: DEP01's sidebar offers screens -- 22: /site-operations-detail /shift-operations /inventory/tanks /inventory/deliveries /other-stocks /products /stock-counts /pump-setup /pump-attendants /attendant-shorts /shift-closure /shift-closure/reports /expenses /suppliers /credit-customers /payments /other-income /depot /books /full-reports /losses /management-reports
+ok    DEP01 /site-operations-detail
+ok    DEP01 /shift-operations
+ok    DEP01 /inventory/tanks
+ok    DEP01 /inventory/deliveries
+ok    DEP01 /other-stocks
+ok    DEP01 /products
+ok    DEP01 /stock-counts
+ok    DEP01 /pump-setup
+ok    DEP01 /pump-attendants
+ok    DEP01 /attendant-shorts
+ok    DEP01 /shift-closure
+ok    DEP01 /shift-closure/reports
+ok    DEP01 /expenses
+ok    DEP01 /suppliers
+ok    DEP01 /credit-customers
+ok    DEP01 /payments
+ok    DEP01 /other-income
+ok    DEP01 /depot
+ok    DEP01 /books
+ok    DEP01 /full-reports
+ok    DEP01 /losses
+ok    DEP01 /management-reports
+PASS  browser: DEP01 signs out, and the books then send to sign-in -- http://localhost:3000/sign-up-login-screen
+PASS  password: Set my password goes on to the home screen -- /site-operations-detail 
+PASS  password: after a change the old password is refused -- 401
+PASS  password: and the new one signs in -- 200
+PASS  password: the original password is put back afterwards -- 200
+PASS  fields: every response has the fields its screen reads (141 contracts)
+
+41/41 checks, 195/195 screens clean, 0 with display findings
