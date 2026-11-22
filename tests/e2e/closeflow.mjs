@@ -138,7 +138,7 @@ try {
   await page.getByRole('button', { name: 'Close Shift' }).first().click();
   await page.waitForTimeout(500);
   // The dialog's own button: the page's header button sits under the overlay.
-  const dialog = page.locator('div', { has: page.getByText('Confirm Shift Closure', { exact: true }) }).last();
+  const dialog = page.locator('div.rounded-2xl', { has: page.getByText('Confirm Shift Closure', { exact: true }) }).first();
   // The dips fell by exactly what the meters let out, handover included, so the
   // gain/loss the supervisor confirms is about nothing. The screen's own
   // estimate, blind to the first holder's litres, said -15 L.
