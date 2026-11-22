@@ -33,7 +33,10 @@ function check(area, screen, name, ok, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'}  [${area}] ${screen}: ${name}${detail ? ' -- ' + detail : ''}`);
 }
 const sum = (xs, f) => xs.reduce((t, x) => t + Number(f(x) || 0), 0);
-const sql = (q) => execFileSync('psql', ['-d', process.env.PGDATABASE || 'fcms', '-X', '-At', '-F', '|', '-c', q], { encoding: 'utf8' }).trim();
+// On the stations' clock, as the API's sessions are (Program.cs), so a check
+// run between midnight and 03:00 dates things the same way.
+const sql = (q) => execFileSync('psql', ['-d', process.env.PGDATABASE || 'fcms', '-X', '-At', '-F', '|', '-c', q],
+  { encoding: 'utf8', env: { ...process.env, PGTZ: 'Africa/Kampala' } }).trim();
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { 'X-Forwarded-For': '10.30.0.1' } });
@@ -97,6 +100,59 @@ await settle();
   }
 }
 
+// ---- Shift reports ---------------------------------------------------------------
+// The shift figures, as the screen gets them, against the database's records
+// (themselves proven against the raw readings by tools/audit/shift_math.sql).
+{
+  await open('/shift-closure/reports');
+  const rows = seen.get('/api/shifts/report') || [];
+  const db14 = Number(sql(`SELECT count(*) FROM shift WHERE state <> 'OPEN' AND business_date > (now() AT TIME ZONE 'Africa/Kampala')::date - 14`));
+  check('truth', 'Shift reports', 'head office sees every station\'s and depot\'s shifts', rows.length === Math.min(db14, 500), `${rows.length} on screen, ${db14} in the database`);
+  // The demo ages: for the arithmetic, every shift it has.
+  const token = await page.evaluate(() => sessionStorage.getItem('fcms_token'));
+  const all = rows.length ? rows : await (await fetch(`${API}/api/shifts/report?days=400`, { headers: { Authorization: 'Bearer ' + token, 'X-Forwarded-For': '10.30.0.1' } })).json();
+  check('logic', 'Shift reports', 'rows to check', all.length > 0, `${all.length}`);
+  const unbalanced = all.filter((r) => !near(Number(r.salesValue) + Number(r.shopValue),
+    Number(r.cashDeclared) + Number(r.electronicDeclared) + Number(r.creditTotal) + Number(r.priceAgreementTotal)
+    + Number(r.discountTotal) + Number(r.shortageRaised) - Number(r.overageRaised)));
+  check('logic', 'Shift reports', 'every shift: fuel + shop = cash + electronic + credit + agreed + discounts + shortage - overage',
+    unbalanced.length === 0, unbalanced.slice(0, 3).map((r) => `${r.businessDate} ${r.label}`).join(', '));
+  const ids = all.map((r) => `'${r.id}'`).join(',');
+  const dbRows = new Map(sql(`
+    SELECT s.id,
+           COALESCE((SELECT SUM(m.amount) FROM money_movement m WHERE m.shift_id = s.id AND m.entry = 'SALE' AND m.dry_sale_id IS NULL), 0),
+           COALESCE((SELECT SUM(m.amount) FROM money_movement m WHERE m.shift_id = s.id AND m.dry_sale_id IS NOT NULL), 0),
+           COALESCE((SELECT -SUM(m.amount) FROM money_movement m WHERE m.shift_id = s.id AND m.settlement = 'CASH'), 0),
+           COALESCE((SELECT SUM(ss.amount) FROM staff_shortage ss WHERE ss.shift_id = s.id), 0),
+           COALESCE((SELECT SUM(md.litres) FROM metered_disposition md JOIN meter_event me ON me.id = md.meter_event_id
+                      WHERE me.shift_id = s.id AND md.kind = 'SALE'), 0)
+      FROM shift s WHERE s.id IN (${ids || "'00000000-0000-0000-0000-000000000000'"})`).split('\n').filter(Boolean)
+    .map((l) => { const [id, fuel, shop, cash, short, litres] = l.split('|'); return [id, { fuel, shop, cash, short, litres }]; }));
+  const off = (f, g) => all.filter((r) => !near(f(r), g(dbRows.get(r.id) || {})));
+  for (const [name, f, g] of [
+    ['fuel sales = what the attendants were charged', (r) => r.salesValue, (d) => d.fuel],
+    ['shop sales = what the sellers were charged', (r) => r.shopValue, (d) => d.shop],
+    ['cash = the cash and drops handed in', (r) => r.cashDeclared, (d) => d.cash],
+    ['shortage = the shortages raised against attendants', (r) => r.shortageRaised, (d) => d.short],
+    ['litres = the litres sold through the meters', (r) => r.salesLitres, (d) => d.litres],
+  ]) {
+    const bad = off(f, g);
+    check('truth', 'Shift reports', name, bad.length === 0, bad.length ? `${bad.length} shifts, e.g. ${f(bad[0])} vs ${g(dbRows.get(bad[0].id) || {})}` : `${all.length} shifts`);
+  }
+  const noSite = all.filter((r) => !r.siteName);
+  check('display', 'Shift reports', 'every row names its site', noSite.length === 0, `${noSite.length} without`);
+  if (rows.length) {
+    const fuelShop = sum(rows, (r) => Number(r.salesValue) + Number(r.shopValue));
+    await shows('Shift reports', 'total sales card = fuel + shop of the listed shifts', 'UGX ' + await fmtIn(fuelShop, 2, 2));
+    await tab('Sales & Payments');
+    const marks = await page.locator('main td[data-balances]').evaluateAll((els) => els.map((e) => e.getAttribute('data-balances')));
+    check('display', 'Shift reports', 'Sales & Payments: every row shows it balances', marks.length === rows.length && marks.every((m) => m === 'yes'),
+      `${marks.filter((m) => m === 'yes').length} of ${rows.length} rows balance on screen`);
+    const t = await text();
+    check('display', 'Shift reports', 'no made-up fuel price on the gain/loss value', !t.includes('1.589'));
+  }
+}
+
 // ---- Books ---------------------------------------------------------------------
 {
   await open('/books');
@@ -108,35 +164,26 @@ await settle();
     check('logic', 'Books', `control ${c.control} ${c.detail}`, planted, `${planted ? 'planted in the demo: ' : ''}off by ${c.difference}`);
   }
 
-  await tab('Trial balance');
-  const tb = seen.get('/api/books/trial-balance') || [];
-  check('logic', 'Trial balance', 'rows received', tb.length > 0, `${tb.length}`);
-  check('logic', 'Trial balance', 'debits = credits', near(sum(tb, (r) => r.debits), sum(tb, (r) => r.credits)), `${sum(tb, (r) => r.debits).toFixed(2)} / ${sum(tb, (r) => r.credits).toFixed(2)}`);
-  check('logic', 'Trial balance', 'closing balances net to zero', near(sum(tb, (r) => r.closing), 0), sum(tb, (r) => r.closing).toFixed(2));
-  const bad = tb.filter((r) => !near(Number(r.opening) + Number(r.debits) - Number(r.credits), r.closing));
-  check('logic', 'Trial balance', 'every row: opening + debits - credits = closing', bad.length === 0, bad.map((r) => r.code).join(' '));
-  for (const r of tb.slice(0, 6)) await shows('Trial balance', `${r.code} shows its debits`, await fmtIn(r.debits, 2, 2));
-  await shows('Trial balance', 'says debits equal credits', 'debits equal credits');
+  // No trial balance or balance sheet any more: the ledger is underneath the
+  // shift controls, not a screen. It must still balance, journal by journal.
+  for (const gone of ['Trial balance', 'Balance sheet'])
+    check('display', 'Books', `no ${gone} tab`, (await page.locator('main').getByText(gone, { exact: true }).count()) === 0);
+  const unbalanced = sql(`SELECT count(*) FROM (SELECT journal_id FROM gl_line GROUP BY journal_id HAVING SUM(amount) <> 0) x`);
+  check('logic', 'Books', 'every journal: debits = credits (database)', unbalanced === '0', `${unbalanced} unbalanced`);
+  {
+    const token = await page.evaluate(() => sessionStorage.getItem('fcms_token'));
+    for (const url of ['/api/books/trial-balance', '/api/books/balance-sheet', '/api/books/years/2025/close']) {
+      const r = await fetch(`${API}${url}`, { method: url.endsWith('close') ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + token, 'X-Forwarded-For': '10.30.0.2' } });
+      check('logic', 'Books', `${url} is gone`, r.status === 404 || r.status === 405, `${r.status}`);
+    }
+  }
 
   await tab('Profit & loss');
   const pl = seen.get('/api/books/profit-and-loss');
-  await tab('Balance sheet');
-  const bs = seen.get('/api/books/balance-sheet');
-  if (bs) {
-    check('logic', 'Balance sheet', 'total assets = sum of asset lines', near(bs.totalAssets, sum(bs.assets, (l) => l.amount), 0.5), `${bs.totalAssets}`);
-    check('logic', 'Balance sheet', 'total liabilities = sum of their lines', near(bs.totalLiabilities, sum(bs.liabilities, (l) => l.amount), 0.5));
-    check('logic', 'Balance sheet', 'equity = its lines + earnings to date', near(bs.totalEquity, sum(bs.equity, (l) => l.amount) + Number(bs.earningsToDate), 0.5));
-    check('logic', 'Balance sheet', 'assets = liabilities + equity', near(bs.totalAssets, Number(bs.totalLiabilities) + Number(bs.totalEquity), 0.5), `difference ${bs.difference}`);
-    await shows('Balance sheet', 'shows total assets', await fmtIn(bs.totalAssets, 0, 0));
-  } else check('logic', 'Balance sheet', 'received', false);
   if (pl) {
     check('logic', 'Profit & loss', 'total income = sum of income lines', near(pl.totalIncome, sum(pl.income, (l) => l.amount), 0.5));
     check('logic', 'Profit & loss', 'net profit = gross profit - expenses', near(pl.netProfit, Number(pl.grossProfit) - Number(pl.totalExpenses), 0.5), `${pl.netProfit}`);
-    // The P&L on screen covers its own period; the balance sheet's earnings run
-    // from the start. Same period from the API, to compare like with like.
-    const token = await page.evaluate(() => sessionStorage.getItem('fcms_token'));
-    const all = await (await fetch(`${API}/api/books/profit-and-loss?from=2000-01-01&to=${bs?.asOf?.slice(0, 10)}`, { headers: { Authorization: 'Bearer ' + token, 'X-Forwarded-For': '10.30.0.2' } })).json();
-    if (bs) check('logic', 'Books', 'profit since the start = the balance sheet\'s earnings to date', near(all.netProfit, bs.earningsToDate, 0.5), `${all.netProfit} vs ${bs.earningsToDate}`);
+    check('logic', 'Profit & loss', 'gross profit = income - cost of sales', near(pl.grossProfit, Number(pl.totalIncome) - sum(pl.costOfSales, (l) => l.amount), 0.5), `${pl.grossProfit}`);
   } else check('logic', 'Profit & loss', 'received', false);
 
   await tab('Bank & mobile money');

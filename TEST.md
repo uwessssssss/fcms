@@ -118,10 +118,10 @@ difference. As `SUP01` the Prices form is refused. That is a manager's call.
 
 **Reports → Books & Reconciliations**, as `HO01`.
 
-**Expect:** *Reconciliations* shows every control agreeing: the trial balance,
-receivables, each tank to the litre, cash, payables. *Receivables* ages each
-customer. Their open-shift credit sits in its own column until the shift
-closes. *Trial balance*: debits equal credits; click an account for its ledger.
+**Expect:** *Reconciliations* shows every control agreeing: the journals
+balance, receivables, each tank to the litre, cash, payables. *Receivables*
+ages each customer. Their open-shift credit sits in its own column until the
+shift closes. There is no trial balance or balance sheet tab.
 *Journals*: open one to see its lines; *New manual journal* refuses one that
 does not balance. As `SUP01` the Books are refused.
 

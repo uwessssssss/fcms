@@ -265,7 +265,7 @@ public sealed class AccountsService
             """
             WITH sold AS (
               SELECT me.tank_id, s.business_date, SUM(md.litres) AS litres,
-                     SUM(md.litres * md.unit_price) AS revenue
+                     SUM(round(md.litres * md.unit_price, 2)) AS revenue
                 FROM meter_event me
                 JOIN metered_disposition md
                   ON md.meter_event_id = me.id AND md.kind = 'SALE'

@@ -88,12 +88,6 @@ public static class RolePermissions
         {
             "audit.view", "report.view"
         },
-        ["DIRECTOR"] = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "audit.view", "cashup.approve", "credit_customer.manage", "discount.authorise",
-            "exception.resolve", "price.execute", "report.view", "shortage.approve",
-            "shortage.write_off", "stock_count.approve"
-        },
         ["HEAD_OFFICE"] = new(StringComparer.OrdinalIgnoreCase)
         {
             "assignment.manage", "banking.record", "cashup.approve", "cashup.declare",

@@ -32,12 +32,12 @@ const SKIP_API = process.env.SKIP_API === '1';          // dry runs against a mo
 const OUT = path.resolve(process.env.OUT || 'out');
 fs.mkdirSync(path.join(OUT, 'shots'), { recursive: true });
 
-const USERS = (process.env.USERS || 'HO01,SYSADMIN,DIR01,AUD01,MGR01,SUP01,ACC01,DEP01').split(',');
+const USERS = (process.env.USERS || 'HO01,SYSADMIN,AUD01,MGR01,SUP01,ACC01,DEP01').split(',');
 const CHANGE_PW_USER = process.env.CHANGE_PW_USER || 'SUP02';
 const ALL_ROUTES = fs.readFileSync(new URL('./routes.txt', import.meta.url), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
 const TABS = {   // screen -> tab labels, opened by head office
-  '/books': ['Bank & mobile money', 'Receivables', 'Trial balance', 'Profit & loss', 'Balance sheet', 'Journals', 'Account ledger'],
+  '/books': ['Bank & mobile money', 'Receivables', 'Profit & loss', 'Journals', 'Account ledger'],
   '/shift-closure': ['Attendants', 'Dippings', 'Sales & Payments', 'Expenses & Discounts', 'Gain / Loss'],
   '/shift-closure/reports': ['Gain / Loss', 'Sales & Payments', 'Variances', 'Statement'],
   '/administration': ['Payment channels', 'Tank calibration', 'Depot'],
@@ -248,7 +248,7 @@ async function browserChecks(browser) {
     // The demo turns "change it at first sign-in" off; a fresh install sends
     // the person to /change-password first, which has no sidebar.
     // Company roles land on the dashboard; a station's people on their site.
-    const home = ['HO01', 'SYSADMIN', 'DIR01', 'AUD01'].includes(user) ? '/' : '/site-operations-detail';
+    const home = ['HO01', 'SYSADMIN', 'AUD01'].includes(user) ? '/' : '/site-operations-detail';
     check('browser', `${user} signs in and lands on ${home}`, landed === home, landed);
     if (landed !== home) { await page.goto(BASE + home, { waitUntil: 'domcontentloaded' }); await settle(page); }
     // The screens this role's sidebar offers; head office opens them all.

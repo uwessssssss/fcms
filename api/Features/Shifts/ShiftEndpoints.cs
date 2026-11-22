@@ -15,8 +15,8 @@ public static class ShiftEndpoints
         g.MapGet("/", async (string? state, int? days, ShiftService s, CancellationToken ct) =>
             Results.Ok(await s.ListAsync(state, days ?? 30, ct)));
 
-        g.MapGet("/report", async (int? days, ShiftService s, CancellationToken ct) =>
-            Results.Ok(await s.ReportAsync(days ?? 14, ct)));
+        g.MapGet("/report", async (int? days, Guid? siteId, ShiftService s, CancellationToken ct) =>
+            Results.Ok(await s.ReportAsync(days ?? 14, siteId, ct)));
         g.MapGet("/current", async (ShiftService s, CancellationToken ct) =>
             await s.CurrentAsync(ct) is { } shift ? Results.Ok(shift) : Results.NoContent());
 

@@ -102,7 +102,7 @@ away.
 
 | control | books | against | must |
 |---|---|---|---|
-| Trial balance | all lines | — | be nil |
+| Journals balance | every journal | — | debits = credits |
 | Receivables 1100 | the control account | every customer's account: credit sales on closed shifts, plus depot credit sales, less payments | agree |
 | Staff shortages 1110 | the control account | shortages less recoveries | agree |
 | Fuel stock 1200 | ledger litres per tank | the tank's last closing dip | agree to the litre |
@@ -157,15 +157,15 @@ shift of that month is still open. Once a month is closed, nothing posts into
 it; a correction is a journal in the next month. A closed month does not reopen
 through the app.
 
-## Closing a year
+## No year-end, trial balance or balance sheet
 
-`POST /api/books/years/{year}/close`, or **Close year** on the Reconciliations
-tab, by an accountant or head office. It is refused until every month of the
-year that has postings, and December, is closed, and it closes once. It writes
-one journal dated 31 December that empties every income and expense account
-into 3100 Retained earnings, site by site. The year's profit and loss still
-shows what the year made: it reads trading entries only and leaves the closing
-journal out. The balance sheet after it shows the profit in 3100.
+FCMS keeps the records of stations and depots: shifts, stock, cash, credit. It
+is not the company's accounting system, so it has no trial balance, balance
+sheet or year-end close (removed Nov 2026). The ledger stays underneath because
+the controls above check every shift's cash, credit and litres against it; the
+*journals balance* control proves it stays whole. Year-end belongs to the
+accounting package. (`fn_gl_close_year` is still in the database from 640 but
+nothing in the app calls it.)
 
 ## Proven
 

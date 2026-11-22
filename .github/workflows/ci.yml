@@ -47,6 +47,10 @@ jobs:
           cd db
           for f in one_station depot demo_day; do psql -d fcms_check -v ON_ERROR_STOP=1 -q -f seed/$f.sql >/dev/null; done
           psql -d fcms_check -X -v ON_ERROR_STOP=1 -f test/scenarios.sql
+      - name: Shift math -- every closed shift recomputed from its readings
+        run: |
+          psql -d fcms_check -X -v ON_ERROR_STOP=1 -f db/test/shift_math_scenario.sql
+          psql -d fcms_check -X -q -v ON_ERROR_STOP=1 -f tools/audit/shift_math.sql
       - name: Attacks that must fail (security)
         run: psql -d fcms_check -X -v ON_ERROR_STOP=1 -f db/test/security.sql
       - name: 14 simulated trading days, every control checked
@@ -141,8 +145,10 @@ jobs:
           FCMS_DEMO_DUMP: db/sim/fcms_sim.dump
         run: |
           bash deploy/db/10-fcms-demo.sh
-          # the roles the demo has nobody in: director, auditor, depot manager
+          # the roles the demo has nobody in: auditor, depot manager
           psql -d fcms -X -v pw="$DEMO_PASSWORD" -f tests/e2e/extra-roles.sql
+          # the demo's 180 shifts, recomputed from their readings
+          psql -d fcms -X -q -v ON_ERROR_STOP=1 -f tools/audit/shift_math.sql | grep "SHIFT MATH"
 
       - name: API -- build and start
         run: |

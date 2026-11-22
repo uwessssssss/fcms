@@ -50,7 +50,7 @@ public sealed class StatementService
 
     // As in BooksService: these roles see the company, not one station.
     private static readonly HashSet<string> CompanyWide =
-        new(StringComparer.OrdinalIgnoreCase) { "DIRECTOR", "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
     private bool SeesCompany => CompanyWide.Contains(_user.Role);
 
     public StatementService(IUnitOfWork uow, ICurrentUser user)
@@ -196,7 +196,7 @@ public sealed class StatementService
                    st.employee_no    AS "employee_no",
                    count(DISTINCT sh.id)          AS "shifts",
                    COALESCE(SUM(md.litres), 0)    AS "litres",
-                   COALESCE(SUM(md.litres * md.unit_price), 0) AS "value",
+                   COALESCE(SUM(round(md.litres * md.unit_price, 2)), 0) AS "value",
                    COALESCE(SUM(ss.amount), 0)    AS "shortages"
               FROM staff st
               JOIN nozzle_assignment na ON na.attendant_id = st.id
@@ -640,7 +640,7 @@ public sealed class StatementService
             WITH sales AS (
               SELECT sh.business_date AS d,
                      SUM(md.litres)                       AS litres,
-                     SUM(md.litres * md.unit_price)       AS gross
+                     SUM(round(md.litres * md.unit_price, 2))       AS gross
                 FROM shift sh
                 JOIN meter_event me ON me.shift_id = sh.id
                 JOIN metered_disposition md

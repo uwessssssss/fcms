@@ -962,9 +962,9 @@ export interface PolicyRow {
   postDecantSettleMin: number;
   cashVarianceAlert: number;
   /** Most cash an attendant should carry between drops (580/590); 0 = off. */
-  attendantCashCap: number;
+  attendantCashCap: number | null;   // nullable on save: left out, the setting stays
   /** A stock variance this small is dipstick noise and is not raised (590). */
-  dipNoiseLitres: number;
+  dipNoiseLitres: number | null;
   maxShortageCarry: number;
   requireSecondApproverAbove: number;
   breakShiftOnPriceChange: boolean;
@@ -1065,16 +1065,26 @@ export interface ShiftReportRow {
   label: string;
   state: string;
   openedByName: string;
+  siteName: string;
+  /** Fuel sold, as charged to the attendants: each line rounded. */
   salesValue: number;
   salesLitres: number;
+  /** Shop and lubricant sales, charged to their sellers. */
+  shopValue: number;
   openExceptions: number;
   cashDeclared: number;
   electronicDeclared: number;
   creditTotal: number;
+  /** Credit at an agreed price: the pump value less what the customer owes. */
+  priceAgreementTotal: number;
   discountTotal: number;
   shortageRaised: number;
+  /** fuel + shop = cash + electronic + credit + agreed-price + discounts + shortage - overage */
+  overageRaised: number;
   /** Closing dip minus book as at the close. Negative is fuel missing. */
   varianceLitres: number;
+  /** The variance at each tank's average cost. */
+  varianceValue: number;
 }
 
 // --- cash drops (580) ---------------------------------------------------------
@@ -1133,15 +1143,6 @@ export interface CustomerPriceRow {
 
 // --- the books (610/620) -----------------------------------------------------
 
-export interface TrialBalanceRow {
-  code: string;
-  name: string;
-  type: string;
-  opening: number;
-  debits: number;
-  credits: number;
-  closing: number;
-}
 export interface LedgerLine {
   postingDate: string | null;
   eventAt: string | null;
@@ -1224,17 +1225,6 @@ export interface ProfitAndLoss {
   expenses: StatementLine[];
   totalExpenses: number;
   netProfit: number;
-}
-export interface BalanceSheet {
-  asOf: string;
-  assets: StatementLine[];
-  totalAssets: number;
-  liabilities: StatementLine[];
-  totalLiabilities: number;
-  equity: StatementLine[];
-  earningsToDate: number;
-  totalEquity: number;
-  difference: number;
 }
 
 // --- bank and mobile money (630) ---------------------------------------------

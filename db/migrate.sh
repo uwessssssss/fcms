@@ -105,6 +105,10 @@ MIGRATIONS=(
   660_money_scope.sql            # audit Nov 2026: bank and wallet accounts keep to their station
   670_wallet_match_order.sql     # audit Nov 2026: wallets matched by shift window before amount
   680_credit_ageing_depot.sql    # audit Nov 2026: customer balances count depot credit sales
+  690_station_records.sql        # no Director user; the trial-balance control renamed
+  700_returns_booked_once.sql    # audit Nov 2026: a handed-over nozzle's tests and returns go back into the tank once
+  710_variance_at_close_moment.sql # audit Nov 2026: variance measured from the previous close's moment, not its dip stamp
+  720_depot_day_local_date.sql   # audit Nov 2026: a depot day counts its own day's loads, by the site's clock
 )
 
 ensure_ledger() {

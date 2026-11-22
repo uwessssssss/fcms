@@ -8,24 +8,26 @@ copies it -- never an older copy.
 
 | name | kind | live in | times written |
 |---|---|---|---|
-| `fn_close_shift` | function | `600_customer_price.sql` | 12 |
-| `fn_close_depot_day` | function | `500_depot_day_closes.sql` | 3 |
+| `fn_close_shift` | function | `700_returns_booked_once.sql` | 13 |
+| `fn_close_depot_day` | function | `720_depot_day_local_date.sql` | 4 |
+| `v_site_performance` | view | `720_depot_day_local_date.sql` | 4 |
+| `fn_gl_controls_checked` | function | `690_station_records.sql` | 3 |
 | `fn_weighted_avg_cost` | function | `540_cost_includes_opening_stock.sql` | 3 |
 | `trg_gl_post` | function | `650_security_hardening.sql` | 3 |
 | `v_daily_stock_loss` | view | `420_daily_loss_is_a_change.sql` | 3 |
-| `v_site_performance` | view | `380_moving_average_cost.sql` | 3 |
 | `fn_bank_auto_match` | function | `670_wallet_match_order.sql` | 2 |
 | `fn_bank_post_statement_line` | function | `650_security_hardening.sql` | 2 |
 | `fn_capture_shift_prices` | function | `560_due_price_applies_at_open.sql` | 2 |
+| `fn_close_variance` | function | `710_variance_at_close_moment.sql` | 2 |
 | `fn_customer_headroom` | function | `450_paid_ahead.sql` | 2 |
 | `fn_dry_avg_cost` | function | `540_cost_includes_opening_stock.sql` | 2 |
 | `fn_execute_price_break` | function | `400_price_break_timing.sql` | 2 |
 | `fn_gl_close_period` | function | `650_security_hardening.sql` | 2 |
 | `fn_gl_close_year` | function | `650_security_hardening.sql` | 2 |
-| `fn_gl_controls_checked` | function | `630_bank_reconciliation.sql` | 2 |
 | `fn_gl_manual_journal` | function | `650_security_hardening.sql` | 2 |
 | `fn_gl_post` | function | `630_bank_reconciliation.sql` | 2 |
 | `fn_gl_post_banking` | function | `630_bank_reconciliation.sql` | 2 |
+| `fn_gl_post_fuel_movement` | function | `700_returns_booked_once.sql` | 2 |
 | `fn_gl_reverse` | function | `650_security_hardening.sql` | 2 |
 | `fn_may_create_staff` | function | `290_platform_and_grants.sql` | 2 |
 | `fn_movement_sign` | function | `270_return_to_tank.sql` | 2 |
@@ -43,6 +45,7 @@ copies it -- never an older copy.
 | `v_credit_ageing_buckets` | view | `450_paid_ahead.sql` | 2 |
 | `v_credit_sale_settlement` | view | `440_one_account_per_customer.sql` | 2 |
 | `v_credit_statement` | view | `440_one_account_per_customer.sql` | 2 |
+| `v_depot_day_activity` | view | `720_depot_day_local_date.sql` | 2 |
 | `v_duty_period` | view | `180_duty_period_links.sql` | 2 |
 | `app_actor` | function | `010_foundation.sql` | 1 |
 | `app_tenant` | function | `010_foundation.sql` | 1 |
@@ -58,7 +61,6 @@ copies it -- never an older copy.
 | `fn_book_stock` | function | `050_fuel_ledger.sql` | 1 |
 | `fn_business_date` | function | `040_shift.sql` | 1 |
 | `fn_check_credit_headroom` | function | `210_credit_limit_race.sql` | 1 |
-| `fn_close_variance` | function | `430_close_variance_is_a_change.sql` | 1 |
 | `fn_company_scope_ok` | function | `660_money_scope.sql` | 1 |
 | `fn_current_price` | function | `042_pricing.sql` | 1 |
 | `fn_customer_price` | function | `600_customer_price.sql` | 1 |
@@ -76,7 +78,6 @@ copies it -- never an older copy.
 | `fn_gl_post_credit_payment` | function | `610_general_ledger.sql` | 1 |
 | `fn_gl_post_dry_movement` | function | `610_general_ledger.sql` | 1 |
 | `fn_gl_post_expense` | function | `610_general_ledger.sql` | 1 |
-| `fn_gl_post_fuel_movement` | function | `610_general_ledger.sql` | 1 |
 | `fn_gl_post_money_transfer` | function | `630_bank_reconciliation.sql` | 1 |
 | `fn_gl_post_other_income` | function | `610_general_ledger.sql` | 1 |
 | `fn_gl_post_shift` | function | `610_general_ledger.sql` | 1 |
@@ -108,9 +109,11 @@ copies it -- never an older copy.
 | `fn_record_cash_drop` | function | `580_cash_drop.sql` | 1 |
 | `fn_require_operator_author` | function | `020_people.sql` | 1 |
 | `fn_rls_on_create` | function | `080_security.sql` | 1 |
+| `fn_role_permission_no_director` | function | `690_station_records.sql` | 1 |
 | `fn_session_is_live` | function | `020_people.sql` | 1 |
 | `fn_set_password` | function | `090_admin.sql` | 1 |
 | `fn_shift_price` | function | `042_pricing.sql` | 1 |
+| `fn_staff_no_director` | function | `690_station_records.sql` | 1 |
 | `fn_station_scope_ok` | function | `530_station_scope.sql` | 1 |
 | `fn_void_cash_drop` | function | `580_cash_drop.sql` | 1 |
 | `fn_water_litres` | function | `190_dips_in_litres.sql` | 1 |
@@ -156,7 +159,6 @@ copies it -- never an older copy.
 | `v_cash_up_position` | view | `060_money_ledger.sql` | 1 |
 | `v_cumulative_stock_loss` | view | `100_directors_and_losses.sql` | 1 |
 | `v_daily_expense` | view | `110_expenses_and_payables.sql` | 1 |
-| `v_depot_day_activity` | view | `140_depot_day.sql` | 1 |
 | `v_dry_stock_on_hand` | view | `045_dry_stock.sql` | 1 |
 | `v_meter_divergence` | view | `100_directors_and_losses.sql` | 1 |
 | `v_site_approval_readiness` | view | `240_org_rules.sql` | 1 |

@@ -33,7 +33,8 @@ namespace Fcms.Api.Infrastructure
 
     public enum StaffRole
     {
-        ATTENDANT, SUPERVISOR, MANAGER, ACCOUNTANT, AUDITOR, ADMIN, DIRECTOR,
+        ATTENDANT, SUPERVISOR, MANAGER, ACCOUNTANT, AUDITOR, ADMIN,
+        DIRECTOR,   // retired (690): kept only because the database enum still has it; nobody can hold it
         SYSTEM_ADMIN,
         // Runs a company: appoints its managers, approves any of its sites.
         // Not a trading role -- head office holds no tanks and closes no shifts.

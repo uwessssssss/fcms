@@ -161,7 +161,7 @@ public sealed class AdminService
     public AdminService(IUnitOfWork uow, ICurrentUser user) => (_uow, _user) = (uow, user);
 
     private static readonly HashSet<string> Roles = new(StringComparer.OrdinalIgnoreCase)
-        { "ATTENDANT", "SUPERVISOR", "MANAGER", "ACCOUNTANT", "AUDITOR", "ADMIN", "DIRECTOR" };
+        { "ATTENDANT", "SUPERVISOR", "MANAGER", "ACCOUNTANT", "AUDITOR", "ADMIN" };   // no DIRECTOR (690)
 
     // === STAFF ===============================================================
 

@@ -73,6 +73,9 @@ open(sys.argv[1], "r+b").write(struct.pack("<q", 0))   # back to real time
 PY
 psql -X -v ON_ERROR_STOP=1 -d fcms_sim -f "$HERE/check.sql"
 
+echo "== every closed shift recomputed from its readings"
+psql -X -q -v ON_ERROR_STOP=1 -d fcms_sim -f "$REPO/tools/audit/shift_math.sql" | grep -E "SHIFT MATH|^ [A-Z][0-9]+b? " 
+
 if [ -n "${SIM_NO_DUMP:-}" ]; then exit 0; fi
 mkdir -p "$REPO/db/sim"
 pg_dump -Fc -d fcms_sim -f "$REPO/db/sim/fcms_sim.dump"

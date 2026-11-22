@@ -99,16 +99,27 @@ public sealed class ShiftReportRow
     public string Label { get; set; } = "";
     public string State { get; set; } = "";
     public string OpenedByName { get; set; } = "";
+    public string SiteName { get; set; } = "";
+    /// <summary>Fuel sold, as charged to the attendants: each line rounded.</summary>
     public decimal SalesValue { get; set; }
     public decimal SalesLitres { get; set; }
+    /// <summary>Shop and lubricant sales, charged to their sellers.</summary>
+    public decimal ShopValue { get; set; }
     public int OpenExceptions { get; set; }
     public decimal CashDeclared { get; set; }
     public decimal ElectronicDeclared { get; set; }
     public decimal CreditTotal { get; set; }
+    /// <summary>Credit at an agreed price: the pump value less what the customer owes.</summary>
+    public decimal PriceAgreementTotal { get; set; }
     public decimal DiscountTotal { get; set; }
     public decimal ShortageRaised { get; set; }
+    /// <summary>Handed in over what was owed. The shift balances as
+    /// fuel + shop = cash + electronic + credit + agreed-price + discounts + shortage - overage.</summary>
+    public decimal OverageRaised { get; set; }
     /// <summary>Closing dip minus book as at the close. Negative is fuel missing.</summary>
     public decimal VarianceLitres { get; set; }
+    /// <summary>The variance at each tank's average cost.</summary>
+    public decimal VarianceValue { get; set; }
 }
 
 /// <summary>Dapper target: a class with settable properties, so Dapper
@@ -454,7 +465,7 @@ public sealed class ShiftService
               JOIN staff op ON op.id = s.opened_by
               LEFT JOIN (
                 SELECT me.shift_id,
-                       SUM(md.litres * md.unit_price) AS value,
+                       SUM(round(md.litres * md.unit_price, 2)) AS value,
                        SUM(md.litres)                 AS litres
                   FROM meter_event me
                   JOIN metered_disposition md
@@ -580,7 +591,7 @@ public sealed class ShiftService
               -- grew slower every day. Per shift it uses meter_event(shift_id)
               -- and exception_flag(shift_id).
               LEFT JOIN LATERAL (
-                SELECT SUM(md.litres * md.unit_price) AS value,
+                SELECT SUM(round(md.litres * md.unit_price, 2)) AS value,
                        SUM(md.litres)                 AS litres
                   FROM meter_event me
                   JOIN metered_disposition md
@@ -611,7 +622,10 @@ public sealed class ShiftService
     /// </remarks>
     /// <param name="days">How far back.</param>
     /// <param name="ct">Cancellation.</param>
-    public async Task<IReadOnlyList<ShiftReportRow>> ReportAsync(int days, CancellationToken ct)
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
+    public async Task<IReadOnlyList<ShiftReportRow>> ReportAsync(int days, Guid? siteId, CancellationToken ct)
     {
         // Money by attendant: whoever closes shifts, or can read reports.
         if (!_user.Can("report.view") && !_user.Can("shift.close"))
@@ -620,25 +634,31 @@ public sealed class ShiftService
         return (await conn.QueryAsync<ShiftReportRow>(new CommandDefinition(
             """
             SELECT s.id AS Id, s.business_date AS BusinessDate, s.label AS Label,
-                   s.state::text AS State, op.full_name AS OpenedByName,
+                   s.state::text AS State, op.full_name AS OpenedByName, si.name AS SiteName,
                    COALESCE(sales.value, 0)  AS SalesValue,
                    COALESCE(sales.litres, 0) AS SalesLitres,
+                   COALESCE(cu.shop, 0)      AS ShopValue,
                    COALESCE(ex.n, 0)         AS OpenExceptions,
                    COALESCE(cu.cash, 0)      AS CashDeclared,
                    COALESCE(cu.elec, 0)      AS ElectronicDeclared,
                    COALESCE(cu.credit, 0)    AS CreditTotal,
+                   COALESCE(cu.agreed, 0)    AS PriceAgreementTotal,
                    COALESCE(cu.disc, 0)      AS DiscountTotal,
                    COALESCE(cu.short, 0)     AS ShortageRaised,
-                   COALESCE(v.variance, 0)   AS VarianceLitres
+                   COALESCE(cu.over, 0)      AS OverageRaised,
+                   COALESCE(v.variance, 0)   AS VarianceLitres,
+                   COALESCE(v.value, 0)      AS VarianceValue
               FROM shift s
               JOIN staff op ON op.id = s.opened_by
+              JOIN site si ON si.id = s.site_id
               -- LATERAL: totals for THESE shifts only. This grouped every
               -- meter event and every exception in the company's history on
               -- every call, then joined the few rows it needed -- a query that
               -- grew slower every day. Per shift it uses meter_event(shift_id)
               -- and exception_flag(shift_id).
               LEFT JOIN LATERAL (
-                SELECT SUM(md.litres * md.unit_price) AS value,
+                -- Rounded line by line, as each attendant is charged (fn_close_shift).
+                SELECT SUM(round(md.litres * md.unit_price, 2)) AS value,
                        SUM(md.litres)                 AS litres
                   FROM meter_event me
                   JOIN metered_disposition md
@@ -648,21 +668,33 @@ public sealed class ShiftService
                 SELECT count(*) AS n FROM exception_flag
                  WHERE shift_id = s.id AND resolved_at IS NULL) ex ON true
               LEFT JOIN LATERAL (
-                SELECT SUM(cash_declared) AS cash, SUM(electronic_declared) AS elec,
-                       SUM(credit_total) AS credit, SUM(discount_total) AS disc,
-                       SUM(shortage_raised) AS short
-                  FROM v_cash_up_position WHERE shift_id = s.id) cu ON true
+                SELECT -SUM(m.amount) FILTER (WHERE m.settlement = 'CASH') AS cash,
+                       -SUM(m.amount) FILTER (WHERE m.settlement IN ('MOBILE_MONEY', 'CARD', 'VOUCHER')) AS elec,
+                       -SUM(m.amount) FILTER (WHERE m.settlement = 'CREDIT') AS credit,
+                       -SUM(m.amount) FILTER (WHERE m.settlement = 'PRICE_AGREEMENT') AS agreed,
+                       -SUM(m.amount) FILTER (WHERE m.settlement = 'DISCOUNT') AS disc,
+                       -SUM(m.amount) FILTER (WHERE m.settlement = 'SHORTAGE') AS short,
+                       SUM(m.amount) FILTER (WHERE m.settlement = 'OVERAGE') AS over,
+                       SUM(m.amount) FILTER (WHERE m.entry = 'SALE' AND m.dry_sale_id IS NOT NULL) AS shop
+                  FROM money_movement m WHERE m.shift_id = s.id) cu ON true
               LEFT JOIN LATERAL (
-                -- What THIS shift lost: the change since the tank's previous close (430).
-                SELECT SUM(fn_close_variance(d.tank_id, d.product_litres, s.closed_at, s.id)) AS variance
-                  FROM dip_reading d
-                 WHERE d.shift_id = s.id AND d.context = 'SHIFT_CLOSE') v ON true
-             WHERE s.site_id = @site AND s.state <> 'OPEN'
+                -- What THIS shift lost: the change since the tank's previous close
+                -- (430), and what it is worth at the tank's average cost.
+                SELECT SUM(x.var) AS variance,
+                       SUM(round(x.var * COALESCE(fn_weighted_avg_cost(x.tank_id, s.closed_at), 0), 2)) AS value
+                  FROM (SELECT d.tank_id, fn_close_variance(d.tank_id, d.product_litres, s.closed_at, s.id) AS var
+                          FROM dip_reading d
+                         WHERE d.shift_id = s.id AND d.context = 'SHIFT_CLOSE') x) v ON true
+             -- A station sees its own shifts; head office and auditors every
+             -- station's and depot's (or one, when asked). This read only the
+             -- signed-in user's site, so head office -- whose site is the head
+             -- office -- always got an empty report.
+             WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.state <> 'OPEN'
                AND s.business_date > current_date - @days
              ORDER BY s.business_date DESC, s.opened_at DESC
-             LIMIT 200
+             LIMIT 500
             """,
-            new { site = _user.SiteId, days },
+            new { site = CompanyWide.Contains(_user.Role) ? siteId : _user.SiteId, days },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 

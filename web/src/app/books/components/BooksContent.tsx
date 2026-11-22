@@ -16,14 +16,17 @@ import { useToast } from '@/components/ui/Toast';
 import BankReconciliationTab from './BankReconciliation';
 import { useAuth } from '@/context/AuthContext';
 import type {
-  AccountRow, BalanceSheet, ControlRow, JournalRow, JournalLineRow, LedgerLine,
-  ProfitAndLoss, ReceivableRow, TrialBalanceRow,
+  AccountRow, ControlRow, JournalRow, JournalLineRow, LedgerLine,
+  ProfitAndLoss, ReceivableRow,
 } from '@/types/api';
 
-type Tab = 'recs' | 'bank' | 'ar' | 'tb' | 'pl' | 'bs' | 'journals' | 'ledger';
+// FCMS keeps the records of stations and depots: no trial balance or balance
+// sheet (removed Nov 2026). The ledger stays underneath -- it is what the
+// reconciliations below check the shifts' cash, credit and stock against.
+type Tab = 'recs' | 'bank' | 'ar' | 'pl' | 'journals' | 'ledger';
 const TABS: [Tab, string][] = [
-  ['recs', 'Reconciliations'], ['bank', 'Bank & mobile money'], ['ar', 'Receivables'], ['tb', 'Trial balance'], ['pl', 'Profit & loss'],
-  ['bs', 'Balance sheet'], ['journals', 'Journals'], ['ledger', 'Account ledger'],
+  ['recs', 'Reconciliations'], ['bank', 'Bank & mobile money'], ['ar', 'Receivables'], ['pl', 'Profit & loss'],
+  ['journals', 'Journals'], ['ledger', 'Account ledger'],
 ];
 
 const n0 = (v: number | null | undefined) =>
@@ -133,13 +136,11 @@ function Reconciliations() {
   );
 }
 
-// Closing a month (nothing more posts into it) and a year (income and expense
-// to retained earnings). Neither reopens; the database refuses them while
-// shifts are open or months unclosed.
+// Closing a month: nothing more posts into it. It does not reopen, and the
+// database refuses it while any shift of that month is still open.
 function Closing({ differ }: { differ: number }) {
   const { showToast } = useToast();
   const [month, setMonth] = useState(today().slice(0, 7));
-  const [year, setYear] = useState(String(new Date().getFullYear() - 1));
   const [busy, setBusy] = useState(false);
   const closeMonth = async () => {
     if (differ && !window.confirm(`${differ} control(s) differ. Close ${month} anyway? It cannot be reopened.`)) return;
@@ -151,22 +152,12 @@ function Closing({ differ }: { differ: number }) {
     } catch (e) { showToast((e as ApiError).message, 'error'); }
     finally { setBusy(false); }
   };
-  const closeYear = async () => {
-    setBusy(true);
-    try {
-      await api.post(`/api/books/years/${year}/close`, {}, { submission: `close-year:${year}` });
-      showToast(`${year} closed into retained earnings`, 'success');
-    } catch (e) { showToast((e as ApiError).message, 'error'); }
-    finally { setBusy(false); }
-  };
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs rounded-lg border p-2" style={card}>
       <span style={muted}>Accountant or head office:</span>
       <input type="month" className="input-field text-xs" value={month} onChange={(e) => setMonth(e.target.value)} />
       <button disabled={busy} className="px-2 py-1 rounded-md font-semibold" style={{ background: 'var(--muted)' }} onClick={() => void closeMonth()}>Close month</button>
-      <input type="number" className="input-field text-xs w-20" value={year} onChange={(e) => setYear(e.target.value)} />
-      <button disabled={busy} className="px-2 py-1 rounded-md font-semibold" style={{ background: 'var(--muted)' }} onClick={() => void closeYear()}>Close year</button>
-      <span style={muted}>A closed month or year does not reopen.</span>
+      <span style={muted}>A closed month does not reopen.</span>
     </div>
   );
 }
@@ -235,52 +226,6 @@ function Receivables() {
 }
 
 // ---------------------------------------------------------------------------
-function TrialBalance({ onAccount }: { onAccount: (code: string) => void }) {
-  const [from, setFrom] = useState(monthStart());
-  const [to, setTo] = useState(today());
-  const { data, error } = useLoad<TrialBalanceRow[]>(`/api/books/trial-balance?from=${from}&to=${to}`, () => api.get<TrialBalanceRow[]>(`/api/books/trial-balance?from=${from}&to=${to}`));
-  const rows = data ?? [];
-  const dr = rows.reduce((s, r) => s + (r.closing > 0 ? r.closing : 0), 0);
-  const cr = rows.reduce((s, r) => s + (r.closing < 0 ? -r.closing : 0), 0);
-  return (
-    <div className="space-y-3">
-      <Dates from={from} to={to} setFrom={setFrom} setTo={setTo} />
-      <Problem error={error} />
-      <div className="overflow-x-auto rounded-xl border" style={card}>
-        <table className="w-full">
-          <thead><tr style={muted}>
-            <th className={th}>Account</th><th className={th + ' text-right'}>Opening</th>
-            <th className={th + ' text-right'}>Debits</th><th className={th + ' text-right'}>Credits</th>
-            <th className={th + ' text-right'}>Closing Dr</th><th className={th + ' text-right'}>Closing Cr</th>
-          </tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.code} className="border-t cursor-pointer hover:opacity-80" style={{ borderColor: 'var(--border)' }}
-                  onClick={() => onAccount(r.code)} title="Open the account's ledger">
-                <td className={td}><span style={muted}>{r.code}</span> {r.name}</td>
-                <td className={td + ' text-right tabular-nums'}>{n2(r.opening)}</td>
-                <td className={td + ' text-right tabular-nums'}>{n2(r.debits)}</td>
-                <td className={td + ' text-right tabular-nums'}>{n2(r.credits)}</td>
-                <td className={td + ' text-right tabular-nums'}>{r.closing > 0 ? n2(r.closing) : ''}</td>
-                <td className={td + ' text-right tabular-nums'}>{r.closing < 0 ? n2(-r.closing) : ''}</td>
-              </tr>
-            ))}
-            <tr className="border-t font-semibold" style={{ borderColor: 'var(--border)' }}>
-              <td className={td} colSpan={4}>
-                Total {Math.abs(dr - cr) < 0.005
-                  ? <span style={{ color: 'var(--primary)' }}>— debits equal credits</span>
-                  : <span style={{ color: '#ef4444' }}>— OUT BY {n2(dr - cr)}</span>}
-              </td>
-              <td className={td + ' text-right tabular-nums'}>{n2(dr)}</td>
-              <td className={td + ' text-right tabular-nums'}>{n2(cr)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 function Statement({ title, lines, total, totalLabel }: {
   title: string; lines: { code: string; name: string; amount: number }[]; total?: number; totalLabel?: string;
@@ -322,31 +267,6 @@ function ProfitLoss() {
           <p className="text-[11px]" style={muted}>
             Discounts and agreed-price allowances sit with income (a credit premium above the pump reduces them). Fuel
             stock gains and losses, and transit, sit with cost of sales.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Balance() {
-  const [asOf, setAsOf] = useState(today());
-  const { data, error } = useLoad<BalanceSheet>(`/api/books/balance-sheet?asOf=${asOf}`, () => api.get<BalanceSheet>(`/api/books/balance-sheet?asOf=${asOf}`));
-  return (
-    <div className="space-y-3">
-      <Dates to={asOf} setTo={setAsOf} single />
-      <Problem error={error} />
-      {data && (
-        <div className="rounded-xl border p-4 space-y-4 max-w-2xl" style={card}>
-          <Statement title="Assets" lines={data.assets} total={data.totalAssets} totalLabel="Total assets" />
-          <Statement title="Liabilities" lines={data.liabilities} total={data.totalLiabilities} totalLabel="Total liabilities" />
-          <Statement title="Equity"
-                     lines={[...data.equity, { code: '', name: 'Earnings to date (not yet closed)', amount: data.earningsToDate }]}
-                     total={data.totalEquity} totalLabel="Total equity" />
-          <p className="text-xs font-semibold" style={{ color: Math.abs(data.difference) < 0.005 ? 'var(--primary)' : '#ef4444' }}>
-            {Math.abs(data.difference) < 0.005
-              ? 'Assets equal liabilities plus equity.'
-              : `Assets differ from liabilities plus equity by ${n2(data.difference)}.`}
           </p>
         </div>
       )}
@@ -589,11 +509,11 @@ function Ledger({ accounts, code, setCode }: { accounts: AccountRow[]; code: str
 // ---------------------------------------------------------------------------
 export default function BooksContent() {
   // The company-wide controls are head office's (the API refuses a station);
-  // a station's books open on its trial balance instead of on a refusal. (D4)
+  // a station's books open on its profit and loss instead of on a refusal. (D4)
   const { user } = useAuth();
   const companyWide = !user || isCompanyWide(user.role);
   const tabs = companyWide ? TABS : TABS.filter(([k]) => k !== 'recs');
-  const [tab, setTab] = useState<Tab>(companyWide ? 'recs' : 'tb');
+  const [tab, setTab] = useState<Tab>(companyWide ? 'recs' : 'pl');
   const [code, setCode] = useState('');
   const { data: accounts } = useLoad<AccountRow[]>('/api/books/accounts', () => api.get<AccountRow[]>('/api/books/accounts'));
   return (
@@ -615,9 +535,7 @@ export default function BooksContent() {
       {tab === 'recs' && <Reconciliations />}
       {tab === 'bank' && <BankReconciliationTab chart={accounts ?? []} />}
       {tab === 'ar' && <Receivables />}
-      {tab === 'tb' && <TrialBalance onAccount={(c) => { setCode(c); setTab('ledger'); }} />}
       {tab === 'pl' && <ProfitLoss />}
-      {tab === 'bs' && <Balance />}
       {tab === 'journals' && <Journals accounts={accounts ?? []} />}
       {tab === 'ledger' && <Ledger accounts={accounts ?? []} code={code} setCode={setCode} />}
     </div>

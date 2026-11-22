@@ -98,7 +98,7 @@ public sealed class DashboardService
             WITH today AS (
               SELECT s.site_id,
                      COALESCE(SUM(md.litres), 0)                  AS litres,
-                     COALESCE(SUM(md.litres * md.unit_price), 0)  AS revenue
+                     COALESCE(SUM(round(md.litres * md.unit_price, 2)), 0)  AS revenue
                 FROM shift s
                 JOIN meter_event me ON me.shift_id = s.id
                 JOIN metered_disposition md
@@ -179,7 +179,7 @@ public sealed class DashboardService
         var prior = await conn.QuerySingleAsync<PriorDay>(new CommandDefinition(
             """
             SELECT COALESCE(SUM(md.litres), 0)                 AS Litres,
-                   COALESCE(SUM(md.litres * md.unit_price), 0) AS Revenue
+                   COALESCE(SUM(round(md.litres * md.unit_price, 2)), 0) AS Revenue
               FROM shift s
               JOIN meter_event me ON me.shift_id = s.id
               JOIN metered_disposition md

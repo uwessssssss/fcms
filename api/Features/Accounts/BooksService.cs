@@ -108,10 +108,6 @@ public record StatementLine(string Code, string Name, decimal Amount);
 public record ProfitAndLoss(DateOnly From, DateOnly To, List<StatementLine> Income, decimal TotalIncome,
                             List<StatementLine> CostOfSales, decimal GrossProfit,
                             List<StatementLine> Expenses, decimal TotalExpenses, decimal NetProfit);
-public record BalanceSheet(DateOnly AsOf, List<StatementLine> Assets, decimal TotalAssets,
-                           List<StatementLine> Liabilities, decimal TotalLiabilities,
-                           List<StatementLine> Equity, decimal EarningsToDate, decimal TotalEquity,
-                           decimal Difference);
 
 /// <summary>A manual journal line: Amount positive = debit, negative = credit.</summary>
 public record ManualLine(string Code, decimal Amount, string? Memo, Guid? CustomerId, Guid? SupplierId,
@@ -134,7 +130,7 @@ public record ReverseJournal(string Reason);
 public sealed class BooksService
 {
     private static readonly HashSet<string> CompanyWide =
-        new(StringComparer.OrdinalIgnoreCase) { "DIRECTOR", "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
 
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
@@ -159,7 +155,7 @@ public sealed class BooksService
 
     private bool SeesCompany => CompanyWide.Contains(_user.Role);
 
-    public async Task<List<TrialBalanceRow>> TrialBalanceAsync(DateOnly from, DateOnly to, Guid? site, CancellationToken ct,
+    private async Task<List<TrialBalanceRow>> TrialBalanceAsync(DateOnly from, DateOnly to, Guid? site, CancellationToken ct,
         bool tradingOnly = false)
     {
         var s = Require(site);
@@ -192,22 +188,6 @@ public sealed class BooksService
         var gross = totalIncome - cost.Sum(l => l.Amount);
         var totalExpenses = expenses.Sum(l => l.Amount);
         return new ProfitAndLoss(from, to, income, totalIncome, cost, gross, expenses, totalExpenses, gross - totalExpenses);
-    }
-
-    public async Task<BalanceSheet> BalanceSheetAsync(DateOnly asOf, Guid? site, CancellationToken ct)
-    {
-        Require(site);   // checked here too: the permission is visible where it is used
-        var tb = await TrialBalanceAsync(new DateOnly(2000, 1, 1), asOf, site, ct);
-        var assets = tb.Where(r => r.Type == "ASSET").Select(r => new StatementLine(r.Code, r.Name, r.Closing)).ToList();
-        var liabilities = tb.Where(r => r.Type == "LIABILITY").Select(r => new StatementLine(r.Code, r.Name, -r.Closing)).ToList();
-        var equity = tb.Where(r => r.Type == "EQUITY").Select(r => new StatementLine(r.Code, r.Name, -r.Closing)).ToList();
-        // Income less expenses not yet closed into retained earnings.
-        var earnings = -tb.Where(r => r.Type is "INCOME" or "EXPENSE").Sum(r => r.Closing);
-        var totalAssets = assets.Sum(l => l.Amount);
-        var totalLiabilities = liabilities.Sum(l => l.Amount);
-        var totalEquity = equity.Sum(l => l.Amount) + earnings;
-        return new BalanceSheet(asOf, assets, totalAssets, liabilities, totalLiabilities, equity, earnings,
-                                totalEquity, totalAssets - totalLiabilities - totalEquity);
     }
 
     public async Task<List<LedgerLine>> LedgerAsync(string code, DateOnly from, DateOnly to, Guid? site, CancellationToken ct)
@@ -357,19 +337,6 @@ public sealed class BooksService
         catch (PostgresException ex) { throw PostgresErrors.Translate(ex); }
     }
 
-    public async Task<Guid> CloseYearAsync(int year, CancellationToken ct)
-    {
-        Require((Guid?)null);
-        var conn = await _uow.ConnectionAsync(ct);
-        try
-        {
-            return await conn.ExecuteScalarAsync<Guid>(new CommandDefinition(
-                "SELECT fn_gl_close_year(@year, @actor)", new { year, actor = _user.StaffId },
-                transaction: _uow.Transaction, cancellationToken: ct));
-        }
-        catch (PostgresException ex) { throw PostgresErrors.Translate(ex); }
-    }
-
     public async Task ClosePeriodAsync(int year, int month, CancellationToken ct)
     {
         Require(null);
@@ -393,12 +360,11 @@ public static class BooksEndpoints
         static DateOnly Today() => DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
         static DateOnly MonthStart() => new(Today().Year, Today().Month, 1);
 
-        g.MapGet("/trial-balance", async (DateOnly? from, DateOnly? to, Guid? siteId, BooksService s, CancellationToken ct) =>
-            Results.Ok(await s.TrialBalanceAsync(from ?? MonthStart(), to ?? Today(), siteId, ct)));
+        // No trial balance or balance sheet: FCMS keeps the records of stations
+        // and depots (removed Nov 2026). The trial balance stays as the private
+        // basis of the profit and loss.
         g.MapGet("/profit-and-loss", async (DateOnly? from, DateOnly? to, Guid? siteId, BooksService s, CancellationToken ct) =>
             Results.Ok(await s.ProfitAndLossAsync(from ?? MonthStart(), to ?? Today(), siteId, ct)));
-        g.MapGet("/balance-sheet", async (DateOnly? asOf, Guid? siteId, BooksService s, CancellationToken ct) =>
-            Results.Ok(await s.BalanceSheetAsync(asOf ?? Today(), siteId, ct)));
         g.MapGet("/ledger/{code}", async (string code, DateOnly? from, DateOnly? to, Guid? siteId, BooksService s, CancellationToken ct) =>
             Results.Ok(await s.LedgerAsync(code, from ?? MonthStart(), to ?? Today(), siteId, ct)));
         g.MapGet("/receivables", async (DateOnly? asOf, BooksService s, CancellationToken ct) =>
@@ -414,8 +380,6 @@ public static class BooksEndpoints
             Results.Ok(new { journalId = await s.ManualJournalAsync(req, ct) }));
         g.MapPost("/journals/{id:guid}/reverse", async (Guid id, ReverseJournal req, BooksService s, CancellationToken ct) =>
             Results.Ok(new { journalId = await s.ReverseAsync(id, req, ct) }));
-        g.MapPost("/years/{year:int}/close", async (int year, BooksService s, CancellationToken ct) =>
-            Results.Ok(new { journalId = await s.CloseYearAsync(year, ct) }));
         g.MapPost("/periods/{year:int}/{month:int}/close", async (int year, int month, BooksService s, CancellationToken ct) =>
         {
             await s.ClosePeriodAsync(year, month, ct);

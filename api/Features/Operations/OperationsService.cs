@@ -444,7 +444,7 @@ public sealed class OperationsService
         if (!_user.Can("report.view"))
             throw new DomainException("FORBIDDEN", "This needs report.view.", 403);
 
-        var wide = _user.Role is "HEAD_OFFICE" or "DIRECTOR" or "SYSTEM_ADMIN";
+        var wide = _user.Role is "HEAD_OFFICE" or "SYSTEM_ADMIN";
         var conn = await _uow.ConnectionAsync(ct);
         return (await conn.QueryAsync<CashPositionView>(new CommandDefinition(
             """

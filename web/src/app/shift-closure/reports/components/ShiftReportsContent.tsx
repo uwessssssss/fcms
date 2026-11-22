@@ -15,18 +15,23 @@ interface ShiftRecord {
   id: string;
   date: string;
   shift: string;   // Day, Mid or Night (570)
-  attendant: string;
+  attendant: string;   // who opened the shift (not an attendant: a supervisor)
   site: string;
   elecSales: number;
   dipConsumed: number;
   gainLoss: number;
+  gainLossValue: number;
+  /** fuel + shop: everything the attendants were charged for */
   totalSales: number;
   cashSales: number;
-  mobileMoney: number;
-  visa: number;
+  /** mobile money, card and vouchers */
+  electronic: number;
   credit: number;
   discounts: number;
+  /** credit sold at an agreed price: pump value less what the customer owes */
+  agreed: number;
   short: number;
+  over: number;
   status: 'closed' | 'pending' | 'flagged';
 }
 
@@ -60,17 +65,19 @@ function toShiftRecord(r: ShiftReportRow): ShiftRecord {
     date: r.businessDate,
     shift: shiftLabelName(r.label),
     attendant: r.openedByName,
-    site: '',
+    site: r.siteName,
     elecSales: r.salesLitres,
     dipConsumed: r.salesLitres - r.varianceLitres,
     gainLoss: r.varianceLitres,
-    totalSales: r.salesValue,
+    gainLossValue: r.varianceValue,
+    totalSales: r.salesValue + r.shopValue,
     cashSales: r.cashDeclared,
-    mobileMoney: r.electronicDeclared,
-    visa: 0,
+    electronic: r.electronicDeclared,
     credit: r.creditTotal,
     discounts: r.discountTotal,
+    agreed: r.priceAgreementTotal,
     short: r.shortageRaised,
+    over: r.overageRaised,
     status: r.openExceptions > 0 ? 'flagged' : state === 'DECLARED' ? 'pending' : 'closed',
   };
 }
@@ -142,20 +149,27 @@ export default function ShiftReportsContent() {
     elecSales: acc.elecSales + r.elecSales,
     dipConsumed: acc.dipConsumed + r.dipConsumed,
     gainLoss: acc.gainLoss + r.gainLoss,
+    gainLossValue: acc.gainLossValue + r.gainLossValue,
     totalSales: acc.totalSales + r.totalSales,
     cashSales: acc.cashSales + r.cashSales,
-    mobileMoney: acc.mobileMoney + r.mobileMoney,
-    visa: acc.visa + r.visa,
+    electronic: acc.electronic + r.electronic,
     credit: acc.credit + r.credit,
     discounts: acc.discounts + r.discounts,
+    agreed: acc.agreed + r.agreed,
     short: acc.short + r.short,
-  }), { elecSales: 0, dipConsumed: 0, gainLoss: 0, totalSales: 0, cashSales: 0, mobileMoney: 0, visa: 0, credit: 0, discounts: 0, short: 0 });
+    over: acc.over + r.over,
+  }), { elecSales: 0, dipConsumed: 0, gainLoss: 0, gainLossValue: 0, totalSales: 0, cashSales: 0, electronic: 0, credit: 0, discounts: 0, agreed: 0, short: 0, over: 0 });
+
+  // What the takings must add up to. Every shift's cash-ups balance to the
+  // shilling in the database; a row here that does not is a display fault.
+  const unexplained = (r: typeof totals) =>
+    r.totalSales - (r.cashSales + r.electronic + r.credit + r.discounts + r.agreed + r.short - r.over);
 
   const handleExport = useCallback(() => {
     setExporting(true);
     setTimeout(() => {
-      const headers = ['Date', 'Shift', 'Attendant', 'Site', 'Elec Sales (L)', 'Dip Consumed (L)', 'Gain/Loss (L)', 'Total Sales (UGX)', 'Cash (UGX)', 'Mobile Money (UGX)', 'Visa (UGX)', 'Credit (UGX)', 'Discounts (UGX)', 'Short (UGX)', 'Status'];
-      const rows = filtered.map((r) => [r.date, r.shift, r.attendant, r.site, r.elecSales, r.dipConsumed, r.gainLoss, r.totalSales, r.cashSales, r.mobileMoney, r.visa, r.credit, r.discounts, r.short, r.status]);
+      const headers = ['Date', 'Shift', 'Opened by', 'Site', 'Metered sales (L)', 'Dip Consumed (L)', 'Gain/Loss (L)', 'Gain/Loss at cost (UGX)', 'Sales, fuel + shop (UGX)', 'Cash (UGX)', 'Electronic (UGX)', 'Credit (UGX)', 'Discounts (UGX)', 'Agreed prices (UGX)', 'Short (UGX)', 'Over (UGX)', 'Status'];
+      const rows = filtered.map((r) => [r.date, r.shift, r.attendant, r.site, r.elecSales, r.dipConsumed, r.gainLoss, r.gainLossValue, r.totalSales, r.cashSales, r.electronic, r.credit, r.discounts, r.agreed, r.short, r.over, r.status]);
       // Quoted cells: a location like "Kiboga town, Hoima Rd" shifted every
       // column after it when cells were joined with bare commas. (W7)
       downloadCsv(`shift-closure-report-${localDate()}.csv`, headers.map(String), rows);
@@ -224,7 +238,7 @@ export default function ShiftReportsContent() {
         {[
           { label: 'Total Shifts', value: String(filtered.length), icon: 'ClipboardDocumentListIcon', color: 'var(--primary)' },
           { label: 'Total Sales', value: fmtUgx(totals.totalSales), icon: 'BanknotesIcon', color: '#22c55e' },
-          { label: 'Net (after disc.)', value: fmtUgx(totals.totalSales - totals.discounts), icon: 'ReceiptPercentIcon', color: '#3b82f6' },
+          { label: 'Due after discounts', value: fmtUgx(totals.totalSales - totals.discounts - totals.agreed), icon: 'ReceiptPercentIcon', color: '#3b82f6' },
           { label: 'Cumul. Gain/Loss', value: fmtL(Math.abs(totals.gainLoss)), icon: totals.gainLoss >= 0 ? 'ArrowTrendingUpIcon' : 'ArrowTrendingDownIcon', color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444', suffix: totals.gainLoss >= 0 ? 'GAIN' : 'LOSS' },
           { label: 'Total Shorts', value: fmtUgx(totals.short), icon: 'ExclamationTriangleIcon', color: totals.short > 0 ? '#ef4444' : '#22c55e' },
         ].map((card) => (
@@ -285,7 +299,7 @@ export default function ShiftReportsContent() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-                  {['Status', 'Date', 'Shift', 'Attendant', 'Elec Sales', 'Dip Consumed', 'Gain/Loss', 'Total Sales', 'Short'].map((h) => (
+                  {['Status', 'Date', 'Shift', 'Opened by', 'Metered sales', 'Dip Consumed', 'Gain/Loss', 'Sales (fuel + shop)', 'Short'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>{h}</th>
                   ))}
                 </tr>
@@ -392,7 +406,8 @@ export default function ShiftReportsContent() {
                 { label: 'Total Gain (L)', value: filtered.filter((r) => r.gainLoss > 0).reduce((s, r) => s + r.gainLoss, 0), unit: 'L', color: '#22c55e' },
                 { label: 'Total Loss (L)', value: Math.abs(filtered.filter((r) => r.gainLoss < 0).reduce((s, r) => s + r.gainLoss, 0)), unit: 'L', color: '#ef4444' },
                 { label: 'Net Gain/Loss (L)', value: totals.gainLoss, unit: 'L', color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444' },
-                { label: 'Net Value @ UGX 1.589/L', value: totals.gainLoss * 1.589, unit: 'UGX ', color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444' },
+                // At each tank's average cost -- this was litres x 1.589, a made-up price
+                { label: 'Net value at cost', value: totals.gainLossValue, unit: 'UGX ', color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--muted)' }}>
                   <span className="text-xs font-medium text-foreground">{item.label}</span>
@@ -417,7 +432,7 @@ export default function ShiftReportsContent() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-                  {['Date', 'Shift', 'Total Sales', 'Cash', 'Mobile Money', 'Visa/Card', 'Credit', 'Discounts', 'Net Sales'].map((h) => (
+                  {['Date', 'Site', 'Shift', 'Sales (fuel + shop)', 'Cash', 'Electronic', 'Credit', 'Discounts & agreed prices', 'Short / over', 'Balances'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>{h}</th>
                   ))}
                 </tr>
@@ -426,27 +441,32 @@ export default function ShiftReportsContent() {
                 {filtered.map((r, i) => (
                   <tr key={r.id} onClick={() => setDetailFor(r.id)} title="Open this shift" style={{ cursor: 'pointer', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 text-xs text-foreground whitespace-nowrap">{r.date}</td>
+                    <td className="px-4 py-3 text-xs text-foreground">{r.site}</td>
                     <td className="px-4 py-3"><span className="text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--muted)', color: 'var(--foreground)' }}>{r.shift}</span></td>
                     <td className="px-4 py-3 font-mono-nums text-xs font-semibold text-foreground">{fmtUgx(r.totalSales)}</td>
                     <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmtUgx(r.cashSales)}</td>
-                    <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmtUgx(r.mobileMoney)}</td>
-                    <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmtUgx(r.visa)}</td>
+                    <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmtUgx(r.electronic)}</td>
                     <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmtUgx(r.credit)}</td>
-                    <td className="px-4 py-3 font-mono-nums text-xs" style={{ color: '#ef4444' }}>-{fmtUgx(r.discounts)}</td>
-                    <td className="px-4 py-3 font-mono-nums text-xs font-bold" style={{ color: '#22c55e' }}>{fmtUgx(r.totalSales - r.discounts)}</td>
+                    <td className="px-4 py-3 font-mono-nums text-xs text-foreground">{fmtUgx(r.discounts + r.agreed)}</td>
+                    <td className="px-4 py-3 font-mono-nums text-xs" style={{ color: r.short > 0 ? '#ef4444' : r.over > 0 ? '#22c55e' : 'var(--muted-foreground)' }}>
+                      {r.short > 0 ? `-${fmtUgx(r.short)}` : r.over > 0 ? `+${fmtUgx(r.over)}` : '—'}</td>
+                    <td className="px-4 py-3 text-xs font-bold" data-balances={Math.abs(unexplained(r)) < 0.005 ? 'yes' : 'no'}
+                        style={{ color: Math.abs(unexplained(r)) < 0.005 ? '#22c55e' : '#ef4444' }}>
+                      {Math.abs(unexplained(r)) < 0.005 ? '✓' : `off ${fmtUgx(unexplained(r))}`}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: '2px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-                  <td colSpan={2} className="px-4 py-3 text-xs font-bold text-foreground">TOTALS</td>
+                  <td colSpan={3} className="px-4 py-3 text-xs font-bold text-foreground">TOTALS</td>
                   <td className="px-4 py-3 font-mono-nums text-sm font-bold text-foreground">{fmtUgx(totals.totalSales)}</td>
                   <td className="px-4 py-3 font-mono-nums text-xs font-bold text-foreground">{fmtUgx(totals.cashSales)}</td>
-                  <td className="px-4 py-3 font-mono-nums text-xs font-bold text-foreground">{fmtUgx(totals.mobileMoney)}</td>
-                  <td className="px-4 py-3 font-mono-nums text-xs font-bold text-foreground">{fmtUgx(totals.visa)}</td>
+                  <td className="px-4 py-3 font-mono-nums text-xs font-bold text-foreground">{fmtUgx(totals.electronic)}</td>
                   <td className="px-4 py-3 font-mono-nums text-xs font-bold text-foreground">{fmtUgx(totals.credit)}</td>
-                  <td className="px-4 py-3 font-mono-nums text-xs font-bold" style={{ color: '#ef4444' }}>-{fmtUgx(totals.discounts)}</td>
-                  <td className="px-4 py-3 font-mono-nums text-sm font-bold" style={{ color: '#22c55e' }}>{fmtUgx(totals.totalSales - totals.discounts)}</td>
+                  <td className="px-4 py-3 font-mono-nums text-xs font-bold text-foreground">{fmtUgx(totals.discounts + totals.agreed)}</td>
+                  <td className="px-4 py-3 font-mono-nums text-xs font-bold" style={{ color: '#ef4444' }}>-{fmtUgx(totals.short)}{totals.over > 0 ? ` / +${fmtUgx(totals.over)}` : ''}</td>
+                  <td className="px-4 py-3 text-xs font-bold" style={{ color: Math.abs(unexplained(totals)) < 0.005 ? '#22c55e' : '#ef4444' }}>
+                    {Math.abs(unexplained(totals)) < 0.005 ? '✓' : `off ${fmtUgx(unexplained(totals))}`}</td>
                 </tr>
               </tfoot>
             </table>
@@ -485,7 +505,7 @@ export default function ShiftReportsContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-                    {['Date', 'Shift', 'Attendant', 'Meter/Dip Var (L)', 'Cash Short (UGX)', 'Discounts (UGX)', 'Status'].map((h) => (
+                    {['Date', 'Shift', 'Opened by', 'Meter/Dip Var (L)', 'Cash Short (UGX)', 'Discounts (UGX)', 'Status'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: 'var(--muted-foreground)' }}>{h}</th>
                     ))}
                   </tr>
@@ -558,13 +578,17 @@ export default function ShiftReportsContent() {
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--muted-foreground)' }}>Payment Reconciliation</p>
               <div className="space-y-2">
                 {[
-                  { label: 'Physical Cash', value: totals.cashSales },
-                  { label: 'Mobile Money', value: totals.mobileMoney },
-                  { label: 'Visa / Card', value: totals.visa },
-                  { label: 'Credit Accounts', value: totals.credit },
-                  { label: 'Total Collected', value: totals.cashSales + totals.mobileMoney + totals.visa + totals.credit, bold: true },
-                  { label: 'Less: Cash Shorts', value: -totals.short, color: '#ef4444' },
-                  { label: 'Net Collected', value: totals.cashSales + totals.mobileMoney + totals.visa + totals.credit - totals.short, bold: true, color: '#22c55e' },
+                  // Sales, then how they were settled, to the shilling. "Net collected"
+                  // took shortages off money already collected -- a shortage is what
+                  // was NOT handed in, so it was counted twice.
+                  { label: 'Sales (fuel + shop)', value: totals.totalSales, bold: true },
+                  { label: 'Physical cash (incl. drops)', value: totals.cashSales },
+                  { label: 'Mobile money, card, vouchers', value: totals.electronic },
+                  { label: 'Credit accounts', value: totals.credit },
+                  { label: 'Discounts and agreed prices', value: totals.discounts + totals.agreed },
+                  { label: 'Shortages, owed by attendants', value: totals.short, color: '#ef4444' },
+                  { label: 'Less: handed in over', value: -totals.over },
+                  { label: 'Unexplained', value: unexplained(totals), bold: true, color: Math.abs(unexplained(totals)) < 0.005 ? '#22c55e' : '#ef4444' },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px dashed var(--border)' }}>
                     <span className={`text-sm ${row.bold ? 'font-bold' : ''} text-foreground`}>{row.label}</span>
@@ -581,10 +605,10 @@ export default function ShiftReportsContent() {
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--muted-foreground)' }}>Fuel Reconciliation</p>
               <div className="space-y-2">
                 {[
-                  { label: 'Electronic Meter Sales', value: totals.elecSales, unit: 'L' },
+                  { label: 'Metered sales', value: totals.elecSales, unit: 'L' },
                   { label: 'Dip Consumed', value: totals.dipConsumed, unit: 'L' },
                   { label: 'Net Gain / Loss', value: totals.gainLoss, unit: 'L', bold: true, color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444' },
-                  { label: 'Financial Impact @ UGX 1.589/L', value: totals.gainLoss * 1.589, unit: 'UGX ', color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444' },
+                  { label: 'Value at average cost', value: totals.gainLossValue, unit: 'UGX ', color: totals.gainLoss >= 0 ? '#22c55e' : '#ef4444' },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px dashed var(--border)' }}>
                     <span className={`text-sm ${row.bold ? 'font-bold' : ''} text-foreground`}>{row.label}</span>

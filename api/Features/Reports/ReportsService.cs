@@ -194,7 +194,7 @@ public sealed class ReportsService
               SELECT na.attendant_id,
                      count(DISTINCT me.shift_id)          AS shifts,
                      SUM(md.litres)                       AS litres,
-                     SUM(md.litres * md.unit_price)       AS value
+                     SUM(round(md.litres * md.unit_price, 2))       AS value
                 FROM meter_event me
                 JOIN nozzle_assignment na ON na.id = me.assignment_id
                 JOIN metered_disposition md

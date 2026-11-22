@@ -145,7 +145,7 @@ public sealed class AnalyticsService
             """
             SELECT sh.business_date              AS "Date",
                    si.name                       AS SiteName,
-                   SUM(md.litres * md.unit_price) AS Revenue,
+                   SUM(round(md.litres * md.unit_price, 2)) AS Revenue,
                    SUM(md.litres)                AS Litres
               FROM shift sh
               JOIN site si ON si.id = sh.site_id
@@ -171,7 +171,7 @@ public sealed class AnalyticsService
             SELECT p.code                        AS GradeCode,
                    p.name                        AS GradeName,
                    SUM(md.litres)                AS Litres,
-                   SUM(md.litres * md.unit_price) AS Revenue
+                   SUM(round(md.litres * md.unit_price, 2)) AS Revenue
               FROM metered_disposition md
               JOIN meter_event me ON me.id = md.meter_event_id
               JOIN shift sh       ON sh.id = me.shift_id
@@ -206,7 +206,7 @@ public sealed class AnalyticsService
                    sh.opened_at                                 AS OpenedAt,
                    sh.closed_at                                 AS ClosedAt,
                    COALESCE(SUM(md.litres), 0)                  AS Litres,
-                   COALESCE(SUM(md.litres * md.unit_price), 0)  AS Revenue
+                   COALESCE(SUM(round(md.litres * md.unit_price, 2)), 0)  AS Revenue
               FROM shift sh
               LEFT JOIN meter_event me         ON me.shift_id = sh.id
               LEFT JOIN metered_disposition md ON md.meter_event_id = me.id AND md.kind = 'SALE'
@@ -274,7 +274,7 @@ public sealed class AnalyticsService
               LEFT JOIN (
                 SELECT me.nozzle_id,
                        SUM(md.litres)                 AS litres,
-                       SUM(md.litres * md.unit_price) AS revenue,
+                       SUM(round(md.litres * md.unit_price, 2)) AS revenue,
                        -- A meter event carries no time of its own; it is bounded
                        -- by two readings. The closing one is when the nozzle was
                        -- last read, which is what this column means.

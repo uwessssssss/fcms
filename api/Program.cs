@@ -214,7 +214,15 @@ Fcms.Api.Infrastructure.ErrorMiddleware.ShowDatabaseDetail =
 // Data source. One per process, with the schema's enums mapped once so they
 // round-trip as strongly-typed values rather than strings.
 // ---------------------------------------------------------------------------
-var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+// The stations' clock. A session in the server's zone (UTC on every host we
+// deploy to) dated each timestamp by UTC: ::date, current_date and date
+// ranges like occurred_at >= @from::date put 00:00-03:00 in Kampala on the
+// day before -- a 01:00 sale or load in yesterday's report. The simulations
+// always ran the database in Africa/Kampala and every check passes there.
+// An explicit Timezone in FCMS_DB still wins. (Audit Nov 2026)
+var csb = new NpgsqlConnectionStringBuilder(connectionString);
+if (string.IsNullOrEmpty(csb.Timezone)) csb.Timezone = "Africa/Kampala";
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(csb.ConnectionString);
 
 // Npgsql's DEFAULT name translator is snake_case, which would map the C# member
 // OPEN to the Postgres label "open". Every label in this schema is UPPERCASE,

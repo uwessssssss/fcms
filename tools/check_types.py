@@ -62,7 +62,10 @@ cs_types: dict[str, dict[str, str]] = {}
 for f in (ROOT / "api").rglob("*.cs"):
     src = f.read_text(encoding="utf-8")
     for m in re.finditer(
-            r"public sealed class (\w+)\s*\n\{\n((?:\s*(?:///[^\n]*\n)?\s*public [^\n]+\n)+)\}", src):
+            # Line by line: each a /// comment or a public member. The old
+            # nested-optional form allowed one comment line per member and
+            # backtracked exponentially on two (ShiftReportRow, Nov 2026).
+            r"public sealed class (\w+)[ \t]*\n\{\n((?:[ \t]*(?:///[^\n]*|public [^\n]+)\n)+)\}", src):
         props = {}
         for line in m.group(2).split("\n"):
             pm = re.match(r"\s*public\s+([\w<>\[\],\s]+?\??)\s+(\w+)\s*\{ get; set; \}", line)

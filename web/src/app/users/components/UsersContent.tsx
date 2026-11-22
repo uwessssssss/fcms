@@ -51,7 +51,7 @@ function toAppUser(r: StaffRow): AppUser {
     // records" (role <> ATTENDANT) and was read here as its opposite, so
     // supervisors showed as attendants and attendants as supervisors.
     role:
-      role === 'DIRECTOR' || role === 'SYSTEM_ADMIN' || role === 'HEAD_OFFICE'
+      role === 'SYSTEM_ADMIN' || role === 'HEAD_OFFICE'
         ? 'head_office'
         : role === 'MANAGER'
           ? 'site_manager'
@@ -468,7 +468,9 @@ export default function UsersContent() {
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted-foreground)' }}>Role</label>
               <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as AppUser['role'] }))} className="input-field w-full text-sm">
-                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                {/* The API appoints station roles only; it refuses HEAD_OFFICE here
+                    (AdminService.Roles), so the form no longer offers it. */}
+                {ROLES.filter(r => r.value !== 'head_office').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
           </div>
