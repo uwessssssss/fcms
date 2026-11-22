@@ -21,7 +21,9 @@ echo "-- every button and link does something --";   node buttons.js || fail=1
 echo "-- stale values in hooks --";                  node deps.js || fail=1
 echo "-- used before declared, during render --";    node render_order.js || fail=1
 echo "-- rules of hooks --";                           node hooks.js | tee /dev/stderr | grep -q "violations: 0" || fail=1
-echo "-- the key-per-save client, executed --";        node runapi.js | grep -v "^\[FCMS\]" || fail=1
+# Its own exit code: piped straight into grep, a failing check here was
+# grep's success, and "a real 401 still ends the session" failed unseen.
+echo "-- the key-per-save client, executed --";        out=$(node runapi.js) || fail=1; printf '%s\n' "$out" | grep -v "^\[FCMS\]"
 echo "-- the shift report mapping, executed --";       node mapping.js || fail=1
 echo "-- C# lexed --";                                 python3 cslex.py ../../api | tee /dev/stderr | grep -q "broken: 0" || fail=1
 echo "-- cash and variance logic, executed --";        python3 logic_sqlite.py || fail=1

@@ -610,6 +610,10 @@ public sealed class ShiftService
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 
+    // Who sees every station's and depot's shifts (as BooksService).
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     /// <summary>
     /// Every closed shift in a period with its money and its tanks, in ONE
     /// query. The shift report used to fetch each shift's full detail
@@ -621,10 +625,8 @@ public sealed class ShiftService
     /// now(), so the book then includes this shift and excludes later ones.
     /// </remarks>
     /// <param name="days">How far back.</param>
+    /// <param name="siteId">Head office and auditors: one site; omitted, all of them.</param>
     /// <param name="ct">Cancellation.</param>
-    private static readonly HashSet<string> CompanyWide =
-        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
-
     public async Task<IReadOnlyList<ShiftReportRow>> ReportAsync(int days, Guid? siteId, CancellationToken ct)
     {
         // Money by attendant: whoever closes shifts, or can read reports.

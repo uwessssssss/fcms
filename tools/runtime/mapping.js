@@ -15,9 +15,10 @@ const m = { exports: {} }; new Function('module', 'exports', js)(m, m.exports);
 const toShiftRecord = m.exports;
 let ok = 0, bad = 0;
 const check = (n, got, want) => { const g = got === want; g ? ok++ : bad++; console.log(`  ${g ? 'PASS' : 'FAIL'}  ${n}: got ${got}, expected ${want}`); };
-const base = { id: 's', businessDate: '2026-09-28', label: 'DAY', state: 'APPROVED', openedByName: 'Sup', salesValue: 10_000_000,
-  salesLitres: 2_000, openExceptions: 0, cashDeclared: 6e6, electronicDeclared: 3e6, creditTotal: 8e5, discountTotal: 2e5,
-  shortageRaised: 0, varianceLitres: -50 };
+const base = { id: 's', businessDate: '2026-09-28', label: 'DAY', state: 'APPROVED', openedByName: 'Sup', siteName: 'Kiboga',
+  salesValue: 9_900_000, shopValue: 100_000, salesLitres: 2_000, openExceptions: 0, cashDeclared: 6e6, electronicDeclared: 3e6,
+  creditTotal: 7e5, priceAgreementTotal: 1e5, discountTotal: 2e5, shortageRaised: 50_000, overageRaised: 50_000,
+  varianceLitres: -50, varianceValue: -250_000 };
 const r = toShiftRecord(base);
 check('50 L missing shows as a loss (negative)', r.gainLoss, -50);
 check('the dips say 2,050 L left the tank', r.dipConsumed, 2_050);
@@ -28,8 +29,13 @@ check('open exceptions override: flagged', toShiftRecord({ ...base, state: 'DECL
 check('night shift label', toShiftRecord({ ...base, label: 'NIGHT' }).shift, 'Night');
 check('mid shift label (570)', toShiftRecord({ ...base, label: 'MID' }).shift, 'Mid');
 check('a gain is positive', toShiftRecord({ ...base, varianceLitres: 30 }).gainLoss, 30);
-const tenders = r.cashSales + r.mobileMoney + r.credit + r.discounts;
-check('tenders account for the sales value (balanced shift)', tenders, r.totalSales);
+// Sales are fuel + shop; settled by cash, electronic, credit, agreed prices,
+// discounts and shortages, less any overage.
+const settled = r.cashSales + r.electronic + r.credit + r.agreed + r.discounts + r.short - r.over;
+check('sales = fuel + shop', r.totalSales, 10_000_000);
+check('every term of the takings is carried, and they balance', settled, r.totalSales);
+check('the row names its site', r.site, 'Kiboga');
+check('the gain/loss carries its value at cost', r.gainLossValue, -250_000);
 console.log(`\n${ok} passed, ${bad} failed`);
 
 process.exit(bad ? 1 : 0);

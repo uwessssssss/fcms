@@ -7,6 +7,13 @@ const src = fs.readFileSync(path.join(REPO, 'web', 'src', 'lib', 'api.ts'), 'utf
 const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 const store = {}; global.sessionStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => store[k] = v, removeItem: k => delete store[k] };
 global.window = global;
+// The browser's window is an EventTarget: the client announces a session that
+// has ended with window.dispatchEvent. Without it here that line threw, and
+// this check had failed unseen (the runner's pipe hid the exit code).
+const events = new EventTarget();
+global.dispatchEvent = (e) => events.dispatchEvent(e);
+global.addEventListener = (...a) => events.addEventListener(...a);
+global.removeEventListener = (...a) => events.removeEventListener(...a);
 
 // A server with the REAL middleware's rules: a key is stored only on success;
 // same key + same body replays; same key + different body is refused.
