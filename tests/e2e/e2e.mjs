@@ -238,6 +238,10 @@ async function visit(page, log, user, route, tab) {
     }
     const bare = [...main.querySelectorAll('button')].filter((b) => !b.textContent.trim() && !b.getAttribute('aria-label') && !b.getAttribute('title')).length;
     if (bare) out.push(`${bare} button(s) with no label`);
+    // The page itself scrolling sideways: on a phone the whole screen slides,
+    // not just the wide table. Each table should scroll in its own box.
+    const m = document.querySelector('main');
+    if (m && m.scrollWidth > m.clientWidth + 2) out.push(`the page scrolls sideways by ${m.scrollWidth - m.clientWidth}px`);
     return out;
   }).catch(() => []);
   const shot = `shots/${safe(user)}__${safe(route)}${tab ? '__' + safe(tab) : ''}.png`;
@@ -247,9 +251,13 @@ async function visit(page, log, user, route, tab) {
     for (const el of [document.documentElement, document.body, ...document.querySelectorAll('*')]) {
       const cs = getComputedStyle(el);
       if (/(auto|scroll|hidden)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 4 && !el.closest('table')) {
-        // Vertical only: freeing both axes let wide tables spill and widened the
-        // whole screenshot, which a phone never shows.
-        el.style.overflowY = 'visible'; el.style.height = 'auto'; el.style.maxHeight = 'none';
+        // Free both axes unless the box really scrolls sideways (a wide table):
+        // freeing that one spilled the table and widened the whole phone
+        // screenshot. CSS turns a lone overflow-y:visible back into auto, so
+        // the vertical one alone does not unclip.
+        if (el.scrollWidth > el.clientWidth + 1) el.style.overflowY = 'visible';
+        else el.style.overflow = 'visible';
+        el.style.height = 'auto'; el.style.maxHeight = 'none';
       }
     }
     document.documentElement.style.height = 'auto'; document.body.style.height = 'auto';
