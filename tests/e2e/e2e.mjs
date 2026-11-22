@@ -114,7 +114,14 @@ async function apiChecks() {
 async function watch(page) {
   const log = { errors: [], api: [], failed: [] };
   page.on('pageerror', (e) => log.errors.push('crash: ' + e.message.split('\n')[0]));
-  page.on('console', (m) => { if (m.type() === 'error') log.errors.push('console: ' + m.text().slice(0, 200)); });
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    const where = m.location()?.url || '';
+    // A refused API call is judged by its status below (403 is a role's
+    // limit, not a fault); the browser's own echo of it is not counted twice.
+    if (/Failed to load resource/.test(m.text()) && where.startsWith(API)) return;
+    log.errors.push('console: ' + m.text().slice(0, 200) + (where ? ` @ ${where.replace(API, '').replace(BASE, '')}` : ''));
+  });
   page.on('requestfailed', (q) => { if (q.url().startsWith(API)) log.failed.push(`${q.method()} ${q.url().replace(API, '')} ${q.failure()?.errorText}`); });
   page.on('response', async (res) => {
     if (!res.url().startsWith(API) || res.status() < 400) return;
@@ -163,7 +170,7 @@ async function visit(page, log, user, route, tab) {
   const shot = `shots/${safe(user)}__${safe(route)}${tab ? '__' + safe(tab) : ''}.png`;
   await page.screenshot({ path: path.join(OUT, shot), fullPage: true }).catch(() => {});
   pages.push({ user, route, tab: tab || '', ok: issues.length === 0, issues, forbidden, shot });
-  console.log(`${issues.length ? 'ISSUE' : 'ok   '} ${user} ${route}${tab ? ' > ' + tab : ''}${issues.length ? ' :: ' + issues.slice(0, 2).join(' | ') : ''}`);
+  console.log(`${issues.length ? 'ISSUE' : 'ok   '} ${user} ${route}${tab ? ' > ' + tab : ''}${issues.length ? ' :: ' + issues.slice(0, 2).join(' | ') : ''}${forbidden.length ? ' [refused: ' + [...new Set(forbidden)].join(', ') + ']' : ''}`);
 }
 
 async function browserChecks(browser) {
