@@ -313,7 +313,7 @@ export default function DashboardContent() {
         <MetricCard
           label="Litres Dispensed Today"
           value={formatLitres(totalLitres)}
-          subtext={`Across all ${sites.length} sites · avg ${Math.round(totalLitres / sites.filter(s => s.litresDispensed > 0).length / 100) * 100}L per active site`}
+          subtext={(() => { const active = sites.filter(s => s.litresDispensed > 0).length; return active ? `Across all ${sites.length} sites · avg ${Math.round(totalLitres / active / 100) * 100}L per active site` : `Across all ${sites.length} sites · none has sold yet today`; })()}
           trend={{ value: '+3.1% vs yesterday', direction: 'up', positive: true }}
           icon="BeakerIcon"
         />

@@ -202,7 +202,12 @@ async function browserChecks(browser) {
     const log = await watch(page);
     let landed;
     try { landed = await signIn(page, user); }
-    catch (e) { check('browser', `${user} signs in`, false, e.message.split('\n')[0]); await ctx.close(); continue; }
+    catch (e) {
+      const said = (await page.locator('body').innerText().catch(() => '')).match(/[^\n]*(not right|do not match|locked|too many|wait|error|refused|change)[^\n]*/i)?.[0] || '';
+      await page.screenshot({ path: path.join(OUT, `shots/signin-failed-${safe(user)}.png`), fullPage: true }).catch(() => {});
+      check('browser', `${user} signs in`, false, `${e.message.split('\n')[0]} | at ${new URL(page.url()).pathname} | screen says: ${said}`);
+      await ctx.close(); continue;
+    }
     // The demo turns "change it at first sign-in" off; a fresh install sends
     // the person to /change-password first, which has no sidebar.
     // Company roles land on the dashboard; a station's people on their site.
