@@ -48,6 +48,7 @@ copies it -- never an older copy.
 | `v_credit_statement` | view | `440_one_account_per_customer.sql` | 2 |
 | `v_depot_day_activity` | view | `720_depot_day_local_date.sql` | 2 |
 | `v_duty_period` | view | `180_duty_period_links.sql` | 2 |
+| `v_supplier_balance` | view | `750_supplier_balance_by_site.sql` | 2 |
 | `app_actor` | function | `010_foundation.sql` | 1 |
 | `app_tenant` | function | `010_foundation.sql` | 1 |
 | `fn_apply_tenant_rls` | function | `080_security.sql` | 1 |
@@ -164,6 +165,5 @@ copies it -- never an older copy.
 | `v_meter_divergence` | view | `100_directors_and_losses.sql` | 1 |
 | `v_site_approval_readiness` | view | `240_org_rules.sql` | 1 |
 | `v_staff_shortage_balance` | view | `060_money_ledger.sql` | 1 |
-| `v_supplier_balance` | view | `110_expenses_and_payables.sql` | 1 |
 | `v_tank_stock_card` | view | `050_fuel_ledger.sql` | 1 |
 | `v_tank_throughput` | view | `160_system_admin.sql` | 1 |

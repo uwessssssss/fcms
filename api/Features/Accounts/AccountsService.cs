@@ -162,13 +162,19 @@ public sealed class AccountsService
         var conn = await _uow.ConnectionAsync(ct);
         return (await conn.QueryAsync<SupplierBalanceRow>(new CommandDefinition(
             """
+            -- One row a supplier: head office adds its sites together, a site
+            -- sees only what it owes. It listed the view's per-site rows for
+            -- everyone, so a station saw the depot's suppliers.
             SELECT supplier_id AS SupplierId, code AS Code, name AS Name,
-                   billed AS Billed, paid AS Paid, balance AS Balance,
-                   oldest_invoice AS OldestInvoice, earliest_due AS EarliestDue,
-                   overdue AS Overdue
+                   SUM(billed) AS Billed, SUM(paid) AS Paid, SUM(balance) AS Balance,
+                   MIN(oldest_invoice) AS OldestInvoice, MIN(earliest_due) AS EarliestDue,
+                   bool_or(overdue) AS Overdue
               FROM v_supplier_balance
-             ORDER BY balance DESC, name
+             WHERE @site::uuid IS NULL OR site_id = @site OR site_id IS NULL
+             GROUP BY supplier_id, code, name
+             ORDER BY SUM(balance) DESC, name
             """,
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 

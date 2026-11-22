@@ -24,7 +24,7 @@ import type { StatementResult } from "@/types/api";
 export function useStatement<T>(
   key: string,
   map: (row: Record<string, unknown>) => T,
-  range?: { from?: string; to?: string },
+  range?: { from?: string; to?: string; site?: string },
 ): {
   rows: T[];
   totals: Record<string, number>;
@@ -40,6 +40,7 @@ export function useStatement<T>(
 
   const from = range?.from;
   const to = range?.to;
+  const site = range?.site;
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,7 @@ export function useStatement<T>(
     const q = new URLSearchParams();
     if (from) q.set("from", from);
     if (to) q.set("to", to);
+    if (site) q.set("site", site);   // head office narrowing to one site
     const suffix = q.toString() ? `?${q.toString()}` : "";
 
     void api
@@ -76,7 +78,7 @@ export function useStatement<T>(
     // `map` is a new function on every render in most callers, so it is
     // deliberately not a dependency -- including it would refetch forever.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, from, to, nonce]);
+  }, [key, from, to, site, nonce]);
 
   return { rows, totals, loading, error, reload: () => setNonce((n) => n + 1) };
 }

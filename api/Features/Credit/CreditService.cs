@@ -136,6 +136,9 @@ public sealed class CreditService
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
 
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     public CreditService(IUnitOfWork uow, ICurrentUser user) => (_uow, _user) = (uow, user);
 
     private static readonly HashSet<string> Methods =
@@ -448,19 +451,23 @@ public sealed class CreditService
         var conn = await _uow.ConnectionAsync(ct);
         return (await conn.QueryAsync<AgeingRow>(new CommandDefinition(
             """
-            SELECT customer_id AS CustomerId, code AS Code, name AS Name,
-                   credit_limit AS CreditLimit,
-                   payment_terms_days AS PaymentTermsDays,
-                   balance AS Balance, current_30 AS Current30,
-                   days_31_60 AS Days31To60, days_61_90 AS Days61To90,
-                   over_90 AS Over90, oldest_days AS OldestDays,
-                   past_terms AS PastTerms, headroom AS Headroom,
-                   unapplied_credit AS UnappliedCredit,
-                   is_active AS IsActive
-              FROM v_credit_ageing_buckets
-             WHERE is_active OR balance <> 0
-             ORDER BY past_terms DESC, balance DESC, name
+            SELECT b.customer_id AS CustomerId, b.code AS Code, b.name AS Name,
+                   b.credit_limit AS CreditLimit,
+                   b.payment_terms_days AS PaymentTermsDays,
+                   b.balance AS Balance, b.current_30 AS Current30,
+                   b.days_31_60 AS Days31To60, b.days_61_90 AS Days61To90,
+                   b.over_90 AS Over90, b.oldest_days AS OldestDays,
+                   b.past_terms AS PastTerms, b.headroom AS Headroom,
+                   b.unapplied_credit AS UnappliedCredit,
+                   b.is_active AS IsActive
+              FROM v_credit_ageing_buckets b
+              -- Each site its own debtors; a station accountant saw the depot's.
+              JOIN credit_customer c ON c.id = b.customer_id
+             WHERE (b.is_active OR b.balance <> 0)
+               AND (@site::uuid IS NULL OR c.site_id = @site)
+             ORDER BY b.past_terms DESC, b.balance DESC, b.name
             """,
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 

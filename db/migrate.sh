@@ -111,6 +111,7 @@ MIGRATIONS=(
   720_depot_day_local_date.sql   # audit Nov 2026: a depot day counts its own day's loads, by the site's clock
   730_close_everything_in.sql    # both meters on every reading, within 1 L; no close with a delivery decanting or a shortage unexplained
   740_no_director_coded.sql      # the Director refusal, coded for the screen
+  750_supplier_balance_by_site.sql  # billed against paid at the same site
 )
 
 ensure_ledger() {

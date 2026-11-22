@@ -504,6 +504,7 @@ public sealed class StatementService
               FROM v_credit_ageing_buckets b
               JOIN credit_customer c ON c.id = b.customer_id
              WHERE b.balance <> 0
+               AND (@site::uuid IS NULL OR c.site_id = @site)   -- each site its own debtors
              ORDER BY b.over_90 DESC, b.balance DESC
             """,
             [C("customer", "Customer"), C("balance", "Balance", "money"),
@@ -806,7 +807,7 @@ public sealed class StatementService
             .ToList();
 
     public async Task<StatementResult> RunAsync(string key, DateOnly from, DateOnly to,
-                                                CancellationToken ct)
+                                                CancellationToken ct, Guid? site = null)
     {
         if (!Defs.TryGetValue(key, out var def))
             throw new DomainException("NO_SUCH_STATEMENT",
@@ -817,6 +818,17 @@ public sealed class StatementService
                 $"{def.Title} needs the {def.Permission} permission.", 403);
 
         var conn = await _uow.ConnectionAsync(ct);
+        // Head office may narrow to one site of its own company; a station is
+        // always its own, whatever it sends.
+        Guid? scope = SeesCompany ? site : _user.SiteId;
+        if (SeesCompany && site is not null)
+        {
+            var mine = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
+                "SELECT EXISTS (SELECT 1 FROM site WHERE id = @site AND tenant_id = @tenant)",
+                new { site, tenant = _user.TenantId }, transaction: _uow.Transaction, cancellationToken: ct));
+            if (!mine)
+                throw new DomainException("SITE_NOT_YOURS", "That site is not one of this company's.", 403);
+        }
         var rows = (await conn.QueryAsync(new CommandDefinition(
             def.Sql,
             // Company-wide roles see every site (each row names its site); a
@@ -824,7 +836,7 @@ public sealed class StatementService
             // caller's own site, and head office's own site trades nothing, so
             // head office saw empty shortages, expenses, deliveries, dips...
             // (Audit Nov 2026, W2.)
-            new { site = SeesCompany ? (Guid?)null : _user.SiteId, from, to },
+            new { site = scope, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
         var shaped = rows
@@ -860,7 +872,7 @@ public static class StatementEndpoints
         var g = app.MapGroup("/api/statements").RequireAuthorization();
 
 
-        g.MapGet("/{key}", async (string key, DateOnly? from, DateOnly? to,
+        g.MapGet("/{key}", async (string key, DateOnly? from, DateOnly? to, Guid? site,
                                   StatementService s, CancellationToken ct) =>
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
@@ -868,7 +880,7 @@ public static class StatementEndpoints
                 key,
                 from ?? new DateOnly(today.Year, today.Month, 1),
                 to ?? today,
-                ct));
+                ct, site));
         });
     }
 }

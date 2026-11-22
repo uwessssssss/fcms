@@ -1,6 +1,6 @@
 'use client';
 import { useStatement, field, num } from '@/lib/useStatement';
-import { useSites } from '@/lib/useSites';
+import { useSiteOptions } from '@/lib/useSites';
 import type { DailyLossRow, DivergenceRow } from '@/types/api';
 import { api } from '@/lib/api';
 import { downloadCsv } from '@/lib/csv';
@@ -123,18 +123,23 @@ function TableWrapper({ children }: { children: React.ReactNode }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FullReportsContent() {
   const [partial, setPartial] = useState<string[]>([]);
-  const SITES = useSites();
+  const SITES = useSiteOptions();
+  const { isSiteManager, assignedSite } = useAuth();
+  const [activeReport, setActiveReport] = useState<ReportType>('daily');
+  const [filterSite, setFilterSite] = useState('all');   // a site id, or 'all'
+  const [dateFrom, setDateFrom] = useState(monthStartOf(businessToday()));
+  const [dateTo, setDateTo] = useState(businessToday());
+  const pickedSite = filterSite === 'all' ? undefined : SITES.find((x) => x.id === filterSite);
+  // The server scopes a station to itself and adds a company's sites together;
+  // head office narrows by asking for one site. It fetched the current month
+  // only and then dropped every row whose site was not the user's own -- the
+  // rows say "All sites", so a station accountant saw an empty statement.
   const {
     rows: dailyData,
     loading,
     error: loadError,
-  } = useStatement<DailySummary>('daily-summary', toDailySummary);
-
-  const { isSiteManager, assignedSite } = useAuth();
-  const [activeReport, setActiveReport] = useState<ReportType>('daily');
-  const [filterSite, setFilterSite] = useState('all');
-  const [dateFrom, setDateFrom] = useState(monthStartOf(businessToday()));
-  const [dateTo, setDateTo] = useState(businessToday());
+  } = useStatement<DailySummary>('daily-summary', toDailySummary,
+        { from: dateFrom, to: dateTo, site: pickedSite?.id });
 
   // ── STOCK AND PUMPS, FROM THE LEDGER ──
   //
@@ -169,7 +174,8 @@ export default function FullReportsContent() {
 
   const stockData = useMemo(() => {
     const byGrade = new Map<string, DailyLossRow[]>();
-    for (const r of lossRows) byGrade.set(r.productCode, [...(byGrade.get(r.productCode) ?? []), r]);
+    // Head office's site picker narrows the stock too.
+    for (const r of lossRows.filter((x) => !pickedSite || x.siteName === pickedSite.name)) byGrade.set(r.productCode, [...(byGrade.get(r.productCode) ?? []), r]);
     return Array.from(byGrade.entries()).map(([grade, rows]) => {
       const sold = rows.reduce((t, r) => t + r.soldLitres, 0);
       const received = rows.reduce((t, r) => t + r.receivedLitres, 0);
@@ -199,7 +205,7 @@ export default function FullReportsContent() {
         price: loss !== 0 ? Math.abs(lossValue / loss) : 0,
       };
     });
-  }, [lossRows]);
+  }, [lossRows, pickedSite]);
 
   const pumpData = useMemo(() => {
     const byNozzle = new Map<string, DivergenceRow[]>();
@@ -221,14 +227,10 @@ export default function FullReportsContent() {
   const { showToast } = useToast();
 
   // Site managers are locked to their assigned site
-  const effectiveSiteFilter = isSiteManager && assignedSite ? assignedSite : filterSite;
-
-  const filteredDaily = dailyData.filter(d => {
-    if (isSiteManager && assignedSite && d.site && d.site !== assignedSite) return false;   // W1
-    if (!isSiteManager && filterSite !== 'all' && d.site !== filterSite) return false;
-    if (d.date < dateFrom || d.date > dateTo) return false;
-    return true;
-  });
+  const siteLabel = pickedSite?.name ?? (isSiteManager && assignedSite ? assignedSite : 'All sites');
+  const filteredDaily = dailyData
+    .filter((d) => d.date >= dateFrom && d.date <= dateTo)
+    .map((d) => ({ ...d, site: siteLabel }));
 
   const totals = filteredDaily.reduce((acc, d) => ({
     totalSales: acc.totalSales + d.totalSales,
@@ -413,7 +415,7 @@ export default function FullReportsContent() {
                     style={{ minWidth: 140 }}
                   >
                     <option value="all">All Sites</option>
-                    {SITES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {SITES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 )}
                 <div className="flex items-center gap-2">
