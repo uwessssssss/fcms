@@ -351,23 +351,25 @@ function Journals({ accounts }: { accounts: AccountRow[] }) {
               </div>
               <button className="text-xs underline" style={muted} onClick={() => setOpen(null)}>Close</button>
             </div>
-            <table className="w-full">
-              <thead><tr style={muted}>
-                <th className={th}>Account</th><th className={th}>For</th><th className={th + ' text-right'}>Qty</th>
-                <th className={th + ' text-right'}>Debit</th><th className={th + ' text-right'}>Credit</th>
-              </tr></thead>
-              <tbody>
-                {(lines ?? []).map((l, i) => (
-                  <tr key={i} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                    <td className={td}><span style={muted}>{l.code}</span> {l.account}{l.memo ? <div style={muted}>{l.memo}</div> : null}</td>
-                    <td className={td}>{l.party ?? ''}</td>
-                    <td className={td + ' text-right tabular-nums'}>{l.qty === null ? '' : n2(l.qty)}</td>
-                    <td className={td + ' text-right tabular-nums'}>{n2(l.debit)}</td>
-                    <td className={td + ' text-right tabular-nums'}>{n2(l.credit)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead><tr style={muted}>
+                  <th className={th}>Account</th><th className={th}>For</th><th className={th + ' text-right'}>Qty</th>
+                  <th className={th + ' text-right'}>Debit</th><th className={th + ' text-right'}>Credit</th>
+                </tr></thead>
+                <tbody>
+                  {(lines ?? []).map((l, i) => (
+                    <tr key={i} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                      <td className={td}><span style={muted}>{l.code}</span> {l.account}{l.memo ? <div style={muted}>{l.memo}</div> : null}</td>
+                      <td className={td}>{l.party ?? ''}</td>
+                      <td className={td + ' text-right tabular-nums'}>{l.qty === null ? '' : n2(l.qty)}</td>
+                      <td className={td + ' text-right tabular-nums'}>{n2(l.debit)}</td>
+                      <td className={td + ' text-right tabular-nums'}>{n2(l.credit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {!open.reversed && !open.reversesId && (
               <div className="flex gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
                 <input className="input-field flex-1 text-xs" placeholder="Why reverse it? A journal is never edited."

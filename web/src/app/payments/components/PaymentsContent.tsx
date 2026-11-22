@@ -1,4 +1,5 @@
 'use client';
+import { useCan } from '@/lib/useCan';
 import { useStatement, field, num } from '@/lib/useStatement';
 import { api, ApiError } from '@/lib/api';
 import { useSites } from '@/lib/useSites';
@@ -108,6 +109,7 @@ const statusConfig = {
 const ugx = (n: number) => n.toLocaleString('en-UG', Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function PaymentsContent() {
+  const can = useCan();
   const [partial, setPartial] = useState<string[]>([]);
   // A form's problem stays beside its save button until fixed (FormProblem).
   const [problems, setProblems] = useState<Record<string, string>>({});
@@ -245,8 +247,25 @@ export default function PaymentsContent() {
 
   return (
     <>
+    <div className="space-y-6 fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Mobile Money & Visa Payments</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
+            Mobile money and card takings, as each attendant declared them at the shift close
+          </p>
+        </div>
+        {/* This opened an eight-field form whose Save then refused: tenders are
+            declared per attendant at shift close. Say so, and go there. (D2) */}
+        <Link href="/shift-closure" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>
+          Declared at shift close <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+
+      {/* Cash held and banking: below the title, not above it. */}
       {cashPos.length > 0 && cashPos[0].runningOnHand > 0 && (
-        <div className="px-4 pt-4">
+        <div>
           <div className="rounded-xl border p-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             {/* The LATEST running balance -- rows arrive newest first. This summed
                 the positive days only, which counted cash already banked on a
@@ -265,14 +284,16 @@ export default function PaymentsContent() {
           </div>
         </div>
       )}
-      <div className="px-4 pt-4">
+      <div>
         <div className="rounded-xl border p-4 space-y-2" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">Bank the takings</h2>
+            {can('banking.record') && (
             <button onClick={() => setBanking((b) => !b)} className="text-xs font-semibold"
                     style={{ color: 'var(--primary)' }}>
               {banking ? 'Close' : 'Record a deposit'}
             </button>
+            )}
           </div>
           {banking && (
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' }}>
@@ -292,21 +313,7 @@ export default function PaymentsContent() {
           )}
         </div>
       </div>
-    <div className="space-y-6 fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Mobile Money & Visa Payments</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
-            Mobile money and card takings, as each attendant declared them at the shift close
-          </p>
-        </div>
-        {/* This opened an eight-field form whose Save then refused: tenders are
-            declared per attendant at shift close. Say so, and go there. (D2) */}
-        <Link href="/shift-closure" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>
-          Declared at shift close <span aria-hidden="true">→</span>
-        </Link>
-      </div>
+
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

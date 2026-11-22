@@ -472,102 +472,106 @@ export default function FullReportsContent() {
           {/* ── Daily / Weekly / Monthly Table ── */}
           {(activeReport === 'daily' || activeReport === 'weekly' || activeReport === 'monthly') && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Date', 'Site', 'Total Sales', 'Cash', 'Mobile Money', 'Card', 'Credit', 'Discounts', 'Expenses', 'Litres', 'Gain/Loss', 'Short'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDaily.length === 0 && (
-                    <tr><td colSpan={12} className="text-xs text-center py-6" style={{ color: 'var(--muted-foreground)' }}>
-                      No closed shifts in this period. A depot&apos;s loads are on the Depot screen.
-                    </td></tr>
-                  )}
-                  {filteredDaily.map((d) => (
-                    <tr key={`${d.date}-${d.site}`}>
-                      <td className="text-xs font-mono-nums whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
-                      <td className="text-xs font-semibold text-foreground">{d.site}</td>
-                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#00D4A0' }}>{fmtUGX(d.totalSales)}</td>
-                      <td className="font-mono-nums text-xs text-foreground">{fmtUGX(d.cashSales)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>{fmtUGX(d.mobileMoney)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#60A5FA' }}>{fmtUGX(d.visa)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#A78BFA' }}>{fmtUGX(d.credit)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>{d.discounts ? `-${fmtUGX(d.discounts)}` : '—'}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#F43F5E' }}>{d.expenses ? `-${fmtUGX(d.expenses)}` : '—'}</td>
-                      <td className="font-mono-nums text-xs text-foreground">{fmt(d.litresSold)} L</td>
-                      <td><GainLossBadge value={d.gainLoss} /></td>
-                      <td>
-                        {d.short > 0
-                          ? <span className="text-xs font-bold font-mono-nums" style={{ color: '#F43F5E' }}>-{fmtUGX(d.short)}</span>
-                          : <span className="text-xs" style={{ color: '#00D4A0' }}>—</span>}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
+                    <tr>
+                      {['Date', 'Site', 'Total Sales', 'Cash', 'Mobile Money', 'Card', 'Credit', 'Discounts', 'Expenses', 'Litres', 'Gain/Loss', 'Short'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={2} className="text-xs font-bold text-foreground">TOTALS ({filteredDaily.length} records)</td>
-                    <td className="font-mono-nums text-sm font-bold" style={{ color: '#00D4A0' }}>{fmtUGX(totals.totalSales)}</td>
-                    <td className="font-mono-nums text-xs font-bold text-foreground">{fmtUGX(totals.cashSales)}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>{fmtUGX(totals.mobileMoney)}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#60A5FA' }}>{fmtUGX(totals.visa)}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#A78BFA' }}>{fmtUGX(totals.credit)}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>{totals.discounts ? `-${fmtUGX(totals.discounts)}` : '—'}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>{totals.expenses ? `-${fmtUGX(totals.expenses)}` : '—'}</td>
-                    <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(totals.litresSold)} L</td>
-                    <td><GainLossBadge value={totals.gainLoss} /></td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>{totals.short > 0 ? `-${fmtUGX(totals.short)}` : '—'}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredDaily.length === 0 && (
+                      <tr><td colSpan={12} className="text-xs text-center py-6" style={{ color: 'var(--muted-foreground)' }}>
+                        No closed shifts in this period. A depot&apos;s loads are on the Depot screen.
+                      </td></tr>
+                    )}
+                    {filteredDaily.map((d) => (
+                      <tr key={`${d.date}-${d.site}`}>
+                        <td className="text-xs font-mono-nums whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
+                        <td className="text-xs font-semibold text-foreground">{d.site}</td>
+                        <td className="font-mono-nums text-xs font-bold" style={{ color: '#00D4A0' }}>{fmtUGX(d.totalSales)}</td>
+                        <td className="font-mono-nums text-xs text-foreground">{fmtUGX(d.cashSales)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>{fmtUGX(d.mobileMoney)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#60A5FA' }}>{fmtUGX(d.visa)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#A78BFA' }}>{fmtUGX(d.credit)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>{d.discounts ? `-${fmtUGX(d.discounts)}` : '—'}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#F43F5E' }}>{d.expenses ? `-${fmtUGX(d.expenses)}` : '—'}</td>
+                        <td className="font-mono-nums text-xs text-foreground">{fmt(d.litresSold)} L</td>
+                        <td><GainLossBadge value={d.gainLoss} /></td>
+                        <td>
+                          {d.short > 0
+                            ? <span className="text-xs font-bold font-mono-nums" style={{ color: '#F43F5E' }}>-{fmtUGX(d.short)}</span>
+                            : <span className="text-xs" style={{ color: '#00D4A0' }}>—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={2} className="text-xs font-bold text-foreground">TOTALS ({filteredDaily.length} records)</td>
+                      <td className="font-mono-nums text-sm font-bold" style={{ color: '#00D4A0' }}>{fmtUGX(totals.totalSales)}</td>
+                      <td className="font-mono-nums text-xs font-bold text-foreground">{fmtUGX(totals.cashSales)}</td>
+                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>{fmtUGX(totals.mobileMoney)}</td>
+                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#60A5FA' }}>{fmtUGX(totals.visa)}</td>
+                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#A78BFA' }}>{fmtUGX(totals.credit)}</td>
+                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>{totals.discounts ? `-${fmtUGX(totals.discounts)}` : '—'}</td>
+                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>{totals.expenses ? `-${fmtUGX(totals.expenses)}` : '—'}</td>
+                      <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(totals.litresSold)} L</td>
+                      <td><GainLossBadge value={totals.gainLoss} /></td>
+                      <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>{totals.short > 0 ? `-${fmtUGX(totals.short)}` : '—'}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </TableWrapper>
           )}
 
           {/* ── Stock / Gain-Loss / Dipping ── */}
           {(activeReport === 'stock' || activeReport === 'gainloss' || activeReport === 'dipping') && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Grade', 'Opening Stock', 'Received', 'Sold', 'Closing Stock', 'Gain/Loss (L)', 'Gain/Loss Value', 'Price/L'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockData.map((s) => (
-                    <tr key={s.grade}>
-                      <td className="text-xs font-semibold text-foreground">{s.grade}</td>
-                      <td className="font-mono-nums text-xs text-foreground">{fmt(s.openingStock)} L</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#00D4A0' }}>{s.received > 0 ? `+${fmt(s.received)} L` : <span style={{ color: 'var(--muted-foreground)' }}>—</span>}</td>
-                      <td className="font-mono-nums text-xs text-foreground">{fmt(s.sold)} L</td>
-                      <td className="font-mono-nums text-xs text-foreground">{fmt(s.closingStock)} L</td>
-                      <td><GainLossBadge value={s.gainLoss} /></td>
-                      <td className="font-mono-nums text-xs font-semibold" style={{ color: s.gainLossValue >= 0 ? '#00D4A0' : '#F43F5E' }}>
-                        {s.gainLossValue >= 0 ? '+' : ''}UGX {fmt(Math.abs(s.gainLossValue))}
-                      </td>
-                      <td className="font-mono-nums text-xs text-foreground">UGX {fmt(s.price)}</td>
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
+                    <tr>
+                      {['Grade', 'Opening Stock', 'Received', 'Sold', 'Closing Stock', 'Gain/Loss (L)', 'Gain/Loss Value', 'Price/L'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td className="text-xs font-bold text-foreground">TOTALS</td>
-                    <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(stockData.reduce((s, d) => s + d.openingStock, 0))} L</td>
-                    <td />
-                    <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(stockData.reduce((s, d) => s + d.sold, 0))} L</td>
-                    <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(stockData.reduce((s, d) => s + d.closingStock, 0))} L</td>
-                    <td><GainLossBadge value={stockData.reduce((s, d) => s + d.gainLoss, 0)} /></td>
-                    <td className="font-mono-nums text-sm font-bold" style={{ color: stockData.reduce((s, d) => s + d.gainLossValue, 0) >= 0 ? '#00D4A0' : '#F43F5E' }}>
-                      {stockData.reduce((s, d) => s + d.gainLossValue, 0) >= 0 ? '+' : ''}UGX {fmt(Math.abs(stockData.reduce((s, d) => s + d.gainLossValue, 0)))}
-                    </td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    {stockData.map((s) => (
+                      <tr key={s.grade}>
+                        <td className="text-xs font-semibold text-foreground">{s.grade}</td>
+                        <td className="font-mono-nums text-xs text-foreground">{fmt(s.openingStock)} L</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#00D4A0' }}>{s.received > 0 ? `+${fmt(s.received)} L` : <span style={{ color: 'var(--muted-foreground)' }}>—</span>}</td>
+                        <td className="font-mono-nums text-xs text-foreground">{fmt(s.sold)} L</td>
+                        <td className="font-mono-nums text-xs text-foreground">{fmt(s.closingStock)} L</td>
+                        <td><GainLossBadge value={s.gainLoss} /></td>
+                        <td className="font-mono-nums text-xs font-semibold" style={{ color: s.gainLossValue >= 0 ? '#00D4A0' : '#F43F5E' }}>
+                          {s.gainLossValue >= 0 ? '+' : ''}UGX {fmt(Math.abs(s.gainLossValue))}
+                        </td>
+                        <td className="font-mono-nums text-xs text-foreground">UGX {fmt(s.price)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td className="text-xs font-bold text-foreground">TOTALS</td>
+                      <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(stockData.reduce((s, d) => s + d.openingStock, 0))} L</td>
+                      <td />
+                      <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(stockData.reduce((s, d) => s + d.sold, 0))} L</td>
+                      <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(stockData.reduce((s, d) => s + d.closingStock, 0))} L</td>
+                      <td><GainLossBadge value={stockData.reduce((s, d) => s + d.gainLoss, 0)} /></td>
+                      <td className="font-mono-nums text-sm font-bold" style={{ color: stockData.reduce((s, d) => s + d.gainLossValue, 0) >= 0 ? '#00D4A0' : '#F43F5E' }}>
+                        {stockData.reduce((s, d) => s + d.gainLossValue, 0) >= 0 ? '+' : ''}UGX {fmt(Math.abs(stockData.reduce((s, d) => s + d.gainLossValue, 0)))}
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </TableWrapper>
           )}
 
@@ -579,171 +583,181 @@ export default function FullReportsContent() {
               to invent all three. */}
           {activeReport === 'pump' && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Pump / Nozzle', 'Grade', 'Mechanical', 'Electronic', 'Drift'].map((h) => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pumpData.map((p) => (
-                    <tr key={p.pump}>
-                      <td className="text-xs font-semibold text-foreground">{p.pump}</td>
-                      <td className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{p.grade}</td>
-                      <td className="font-mono-nums text-xs font-semibold" style={{ color: '#60A5FA' }}>{fmt(p.totalLitres)} L</td>
-                      <td className="font-mono-nums text-xs text-foreground">
-                        {p.electronicLitres === null ? '—' : `${fmt(p.electronicLitres)} L`}
-                      </td>
-                      <td className="font-mono-nums text-xs font-semibold"
-                          style={{ color: p.drift !== null && Math.abs(p.drift) > 1 ? '#F43F5E' : 'var(--foreground)' }}>
-                        {p.drift === null ? '—' : `${fmt(p.drift)} L`}
-                      </td>
-                    </tr>
-                  ))}
-                  {pumpData.length === 0 && (
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
                     <tr>
-                      <td colSpan={5} className="text-xs text-center p-6" style={{ color: 'var(--muted-foreground)' }}>
-                        No meter readings in this period.
-                      </td>
+                      {['Pump / Nozzle', 'Grade', 'Mechanical', 'Electronic', 'Drift'].map((h) => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={2} className="text-xs font-bold text-foreground">TOTALS</td>
-                    <td className="font-mono-nums text-sm font-bold" style={{ color: '#60A5FA' }}>
-                      {fmt(pumpData.reduce((t, p) => t + p.totalLitres, 0))} L
-                    </td>
-                    <td colSpan={2} />
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    {pumpData.map((p) => (
+                      <tr key={p.pump}>
+                        <td className="text-xs font-semibold text-foreground">{p.pump}</td>
+                        <td className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{p.grade}</td>
+                        <td className="font-mono-nums text-xs font-semibold" style={{ color: '#60A5FA' }}>{fmt(p.totalLitres)} L</td>
+                        <td className="font-mono-nums text-xs text-foreground">
+                          {p.electronicLitres === null ? '—' : `${fmt(p.electronicLitres)} L`}
+                        </td>
+                        <td className="font-mono-nums text-xs font-semibold"
+                            style={{ color: p.drift !== null && Math.abs(p.drift) > 1 ? '#F43F5E' : 'var(--foreground)' }}>
+                          {p.drift === null ? '—' : `${fmt(p.drift)} L`}
+                        </td>
+                      </tr>
+                    ))}
+                    {pumpData.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-xs text-center p-6" style={{ color: 'var(--muted-foreground)' }}>
+                          No meter readings in this period.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={2} className="text-xs font-bold text-foreground">TOTALS</td>
+                      <td className="font-mono-nums text-sm font-bold" style={{ color: '#60A5FA' }}>
+                        {fmt(pumpData.reduce((t, p) => t + p.totalLitres, 0))} L
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </TableWrapper>
           )}
 
           {/* ── Variances ── */}
           {activeReport === 'variances' && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Grade', 'Elec. Meter (L)', 'Dip Consumed (L)', 'Variance (L)', 'Variance %', 'Value Impact', 'Status'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockData.map((s) => {
-                    const variance = s.gainLoss;
-                    const variancePct = s.sold > 0 ? (variance / s.sold) * 100 : 0;
-                    const valueImpact = variance * s.price;
-                    const status = Math.abs(variancePct) < 0.5 ? 'Normal' : Math.abs(variancePct) < 1 ? 'Watch' : 'Alert';
-                    const statusColor = status === 'Normal' ? '#00D4A0' : status === 'Watch' ? '#F59E0B' : '#F43F5E';
-                    return (
-                      <tr key={s.grade}>
-                        <td className="text-xs font-semibold text-foreground">{s.grade}</td>
-                        <td className="font-mono-nums text-xs text-foreground">{fmt(s.sold)} L</td>
-                        <td className="font-mono-nums text-xs text-foreground">{fmt(s.sold - variance, 1)} L</td>
-                        <td><GainLossBadge value={variance} decimals={2} /></td>
-                        <td className="font-mono-nums text-xs" style={{ color: Math.abs(variancePct) > 1 ? '#F43F5E' : 'var(--muted-foreground)' }}>
-                          {fmt(variancePct, 2)}%
-                        </td>
-                        <td className="font-mono-nums text-xs font-semibold" style={{ color: valueImpact >= 0 ? '#00D4A0' : '#F43F5E' }}>
-                          {valueImpact >= 0 ? '+' : ''}UGX {fmt(Math.abs(valueImpact))}
-                        </td>
-                        <td>
-                          <span
-                            className="text-xs px-2.5 py-1 rounded-full font-semibold"
-                            style={{ background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}25` }}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
+                    <tr>
+                      {['Grade', 'Elec. Meter (L)', 'Dip Consumed (L)', 'Variance (L)', 'Variance %', 'Value Impact', 'Status'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockData.map((s) => {
+                      const variance = s.gainLoss;
+                      const variancePct = s.sold > 0 ? (variance / s.sold) * 100 : 0;
+                      const valueImpact = variance * s.price;
+                      const status = Math.abs(variancePct) < 0.5 ? 'Normal' : Math.abs(variancePct) < 1 ? 'Watch' : 'Alert';
+                      const statusColor = status === 'Normal' ? '#00D4A0' : status === 'Watch' ? '#F59E0B' : '#F43F5E';
+                      return (
+                        <tr key={s.grade}>
+                          <td className="text-xs font-semibold text-foreground">{s.grade}</td>
+                          <td className="font-mono-nums text-xs text-foreground">{fmt(s.sold)} L</td>
+                          <td className="font-mono-nums text-xs text-foreground">{fmt(s.sold - variance, 1)} L</td>
+                          <td><GainLossBadge value={variance} decimals={2} /></td>
+                          <td className="font-mono-nums text-xs" style={{ color: Math.abs(variancePct) > 1 ? '#F43F5E' : 'var(--muted-foreground)' }}>
+                            {fmt(variancePct, 2)}%
+                          </td>
+                          <td className="font-mono-nums text-xs font-semibold" style={{ color: valueImpact >= 0 ? '#00D4A0' : '#F43F5E' }}>
+                            {valueImpact >= 0 ? '+' : ''}UGX {fmt(Math.abs(valueImpact))}
+                          </td>
+                          <td>
+                            <span
+                              className="text-xs px-2.5 py-1 rounded-full font-semibold"
+                              style={{ background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}25` }}
+                            >
+                              {status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </TableWrapper>
           )}
 
           {/* ── Expenses ── */}
           {activeReport === 'expenses' && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Date', 'Site', 'Total Expenses', 'vs Sales %'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDaily.map((d) => (
-                    <tr key={`${d.date}-${d.site}`}>
-                      <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
-                      <td className="text-xs font-semibold text-foreground">{d.site}</td>
-                      <td className="font-mono-nums text-xs font-semibold" style={{ color: '#F43F5E' }}>UGX {fmt(d.expenses)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt(d.totalSales ? (d.expenses / d.totalSales) * 100 : 0, 1)}%</td>
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
+                    <tr>
+                      {['Date', 'Site', 'Total Expenses', 'vs Sales %'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredDaily.map((d) => (
+                      <tr key={`${d.date}-${d.site}`}>
+                        <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
+                        <td className="text-xs font-semibold text-foreground">{d.site}</td>
+                        <td className="font-mono-nums text-xs font-semibold" style={{ color: '#F43F5E' }}>UGX {fmt(d.expenses)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt(d.totalSales ? (d.expenses / d.totalSales) * 100 : 0, 1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </TableWrapper>
           )}
 
           {/* ── Credit ── */}
           {activeReport === 'credit' && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Date', 'Site', 'Credit Sales', '% of Total Sales'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDaily.map((d) => (
-                    <tr key={`${d.date}-${d.site}`}>
-                      <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
-                      <td className="text-xs font-semibold text-foreground">{d.site}</td>
-                      <td className="font-mono-nums text-xs font-semibold" style={{ color: '#A78BFA' }}>UGX {fmt(d.credit)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt(d.totalSales ? (d.credit / d.totalSales) * 100 : 0, 1)}%</td>
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
+                    <tr>
+                      {['Date', 'Site', 'Credit Sales', '% of Total Sales'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredDaily.map((d) => (
+                      <tr key={`${d.date}-${d.site}`}>
+                        <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
+                        <td className="text-xs font-semibold text-foreground">{d.site}</td>
+                        <td className="font-mono-nums text-xs font-semibold" style={{ color: '#A78BFA' }}>UGX {fmt(d.credit)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: 'var(--muted-foreground)' }}>{fmt(d.totalSales ? (d.credit / d.totalSales) * 100 : 0, 1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </TableWrapper>
           )}
 
           {/* ── Payments Breakdown ── */}
           {activeReport === 'payments' && (
             <TableWrapper>
-              <table className="table-premium">
-                <thead>
-                  <tr>
-                    {['Date', 'Site', 'Cash', 'Mobile Money', 'Visa/Card', 'Credit', 'Total'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDaily.map((d) => (
-                    <tr key={`${d.date}-${d.site}`}>
-                      <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
-                      <td className="text-xs font-semibold text-foreground">{d.site}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#00D4A0' }}>UGX {fmt(d.cashSales)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>UGX {fmt(d.mobileMoney)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#60A5FA' }}>UGX {fmt(d.visa)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#A78BFA' }}>UGX {fmt(d.credit)}</td>
-                      <td className="font-mono-nums text-xs font-bold text-foreground">UGX {fmt(d.totalSales)}</td>
+              <div className="overflow-x-auto">
+                <table className="table-premium">
+                  <thead>
+                    <tr>
+                      {['Date', 'Site', 'Cash', 'Mobile Money', 'Visa/Card', 'Credit', 'Total'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredDaily.map((d) => (
+                      <tr key={`${d.date}-${d.site}`}>
+                        <td className="text-xs font-mono-nums" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
+                        <td className="text-xs font-semibold text-foreground">{d.site}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#00D4A0' }}>UGX {fmt(d.cashSales)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>UGX {fmt(d.mobileMoney)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#60A5FA' }}>UGX {fmt(d.visa)}</td>
+                        <td className="font-mono-nums text-xs" style={{ color: '#A78BFA' }}>UGX {fmt(d.credit)}</td>
+                        <td className="font-mono-nums text-xs font-bold text-foreground">UGX {fmt(d.totalSales)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </TableWrapper>
           )}
 

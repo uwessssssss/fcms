@@ -247,7 +247,9 @@ async function visit(page, log, user, route, tab) {
     for (const el of [document.documentElement, document.body, ...document.querySelectorAll('*')]) {
       const cs = getComputedStyle(el);
       if (/(auto|scroll|hidden)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 4 && !el.closest('table')) {
-        el.style.overflow = 'visible'; el.style.height = 'auto'; el.style.maxHeight = 'none';
+        // Vertical only: freeing both axes let wide tables spill and widened the
+        // whole screenshot, which a phone never shows.
+        el.style.overflowY = 'visible'; el.style.height = 'auto'; el.style.maxHeight = 'none';
       }
     }
     document.documentElement.style.height = 'auto'; document.body.style.height = 'auto';

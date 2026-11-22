@@ -50,6 +50,12 @@ const TABS: [Tab, string][] = [
   ['hourly', 'By shift'],
 ];
 
+/** Litres to one place: a loss of 0.4 L rounded to whole litres read as a red "-0". */
+const l1 = (v: number) => {
+  const r = Math.round(Number(v) * 10) / 10;
+  return (Object.is(r, -0) ? 0 : r).toLocaleString('en-UG', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+};
+
 export default function ManagementReportsContent() {
   const hasDepot = useHasDepot();
   const today = businessToday();
@@ -234,14 +240,14 @@ export default function ManagementReportsContent() {
       {!loading && !loadError && tab === 'loss' && (
         <>
           <Table head={['Grade', 'Sold', 'Lost', 'Value', 'Loss %', 'Tolerance', 'Days with a loss', 'Worst day']}
-                 rows={summary.map((s) => [s.productCode, fmt(s.totalSold), <span key="l" style={red(s.totalLoss < 0)}>{fmt(s.totalLoss)}</span>,
+                 rows={summary.map((s) => [s.productCode, fmt(s.totalSold), <span key="l" style={red(s.totalLoss < 0)}>{l1(s.totalLoss)}</span>,
                    fmt(s.totalLossValue),
                    <span key="p" style={red(s.overTolerance)}>{s.lossPct === null ? '—' : `${s.lossPct.toFixed(2)}%`}</span>,
                    s.tolerancePct === null ? '—' : `${Number(s.tolerancePct).toFixed(2)}%`,
-                   `${s.daysWithLoss} of ${s.daysMeasured}`, s.worstDate ? `${fmt(s.worstDayLitres)} L on ${s.worstDate}` : '—'])} />
+                   `${s.daysWithLoss} of ${s.daysMeasured}`, s.worstDate ? `${l1(s.worstDayLitres)} L on ${s.worstDate}` : '—'])} />
           <Table head={['Date', 'Grade', 'Lost that day', 'Lost so far', 'Of all sold']}
-                 rows={cumulative.map((c) => [c.businessDate, c.productCode, fmt(c.dayLossLitres),
-                   <span key="c" style={red(c.cumulativeLossLitres < 0)}>{fmt(c.cumulativeLossLitres)}</span>,
+                 rows={cumulative.map((c) => [c.businessDate, c.productCode, l1(c.dayLossLitres),
+                   <span key="c" style={red(c.cumulativeLossLitres < 0)}>{l1(c.cumulativeLossLitres)}</span>,
                    c.cumulativeLossPct === null ? '—' : `${c.cumulativeLossPct.toFixed(2)}%`])} />
         </>
       )}

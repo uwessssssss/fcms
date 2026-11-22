@@ -661,25 +661,27 @@ export default function ShiftReportsContent() {
               </>
             )}
             {tenders.length > 0 && (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr style={{ color: 'var(--muted-foreground)' }}>
-                    {['Attendant', 'How', 'Channel', 'Till', 'Amount', 'Reference'].map((h) => <th key={h} className="text-left p-2">{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenders.map((t, i) => (
-                    <tr key={i} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                      <td className="p-2">{t.attendantName}</td>
-                      <td className="p-2">{t.settlement.toLowerCase().replace('_', ' ')}</td>
-                      <td className="p-2">{t.channelName ?? ''}</td>
-                      <td className="p-2">{t.tillNumber ?? ''}</td>
-                      <td className="p-2">{t.amount.toLocaleString()}</td>
-                      <td className="p-2">{t.reference ?? ''}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ color: 'var(--muted-foreground)' }}>
+                      {['Attendant', 'How', 'Channel', 'Till', 'Amount', 'Reference'].map((h) => <th key={h} className="text-left p-2">{h}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {tenders.map((t, i) => (
+                      <tr key={i} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                        <td className="p-2">{t.attendantName}</td>
+                        <td className="p-2">{t.settlement.toLowerCase().replace('_', ' ')}</td>
+                        <td className="p-2">{t.channelName ?? ''}</td>
+                        <td className="p-2">{t.tillNumber ?? ''}</td>
+                        <td className="p-2">{t.amount.toLocaleString()}</td>
+                        <td className="p-2">{t.reference ?? ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
             <button onClick={() => setDetailFor(null)} className="px-3 py-2 rounded-xl text-sm"
                     style={{ background: 'var(--muted)', color: 'var(--foreground)' }}>Close</button>

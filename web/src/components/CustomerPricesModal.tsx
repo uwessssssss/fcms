@@ -168,31 +168,33 @@ export default function CustomerPricesModal({ customerId, customerName, onClose 
         </p>
 
         {rows.length > 0 && (
-          <table className="w-full text-xs">
-            <thead>
-              <tr style={muted}>
-                <th className="text-left py-1">Product</th><th className="text-right">UGX / L</th>
-                <th className="text-left pl-3">From</th><th className="text-left">Until</th><th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t" style={{ borderColor: 'var(--border)', opacity: r.inForce ? 1 : 0.55 }}>
-                  <td className="py-1" title={`${r.reason} — agreed by ${r.authorisedBy}`}>{r.product}</td>
-                  <td className="text-right">
-                    {r.price !== null ? fmt(r.price) : `pump ${r.margin! > 0 ? '+' : '−'} ${fmt(Math.abs(r.margin!))}`}
-                  </td>
-                  <td className="pl-3">{when(r.validFrom)}</td>
-                  <td>{r.validTo ? when(r.validTo) : 'open'}</td>
-                  <td className="text-right">
-                    {r.inForce && !r.validTo
-                      ? <button disabled={busy} className="underline" style={muted} onClick={() => void end(r.id)}>end</button>
-                      : <span style={muted}>{r.inForce ? 'ending' : 'ended'}</span>}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={muted}>
+                  <th className="text-left py-1">Product</th><th className="text-right">UGX / L</th>
+                  <th className="text-left pl-3">From</th><th className="text-left">Until</th><th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-t" style={{ borderColor: 'var(--border)', opacity: r.inForce ? 1 : 0.55 }}>
+                    <td className="py-1" title={`${r.reason} — agreed by ${r.authorisedBy}`}>{r.product}</td>
+                    <td className="text-right">
+                      {r.price !== null ? fmt(r.price) : `pump ${r.margin! > 0 ? '+' : '−'} ${fmt(Math.abs(r.margin!))}`}
+                    </td>
+                    <td className="pl-3">{when(r.validFrom)}</td>
+                    <td>{r.validTo ? when(r.validTo) : 'open'}</td>
+                    <td className="text-right">
+                      {r.inForce && !r.validTo
+                        ? <button disabled={busy} className="underline" style={muted} onClick={() => void end(r.id)}>end</button>
+                        : <span style={muted}>{r.inForce ? 'ending' : 'ended'}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

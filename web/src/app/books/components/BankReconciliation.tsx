@@ -147,18 +147,20 @@ function ImportStatement({ account, onDone, onClose }: { account: MoneyAccountRo
               {pick('date', 'Date (and time)')}{pick('description', 'Description')}{pick('reference', 'Reference')}
               {pick('amount', 'Amount (signed)')}{pick('credit', 'Money in')}{pick('debit', 'Money out')}{pick('balance', 'Balance')}
             </div>
-            <table className="w-full">
-              <thead><tr style={muted}><th className={th}>Date</th><th className={th}>Description</th><th className={th}>Ref</th><th className={th + ' text-right'}>Amount</th></tr></thead>
-              <tbody>
-                {lines.slice(0, 8).map((l, i) => (
-                  <tr key={i} className="border-t" style={{ borderColor: 'var(--border)', color: !l.date || !Number.isFinite(l.amount) ? '#ef4444' : undefined }}>
-                    <td className={td}>{l.at ? l.at.slice(0, 16).replace('T', ' ') : l.date ?? 'not a date'}</td>
-                    <td className={td}>{l.description}</td><td className={td}>{l.reference}</td>
-                    <td className={td + ' text-right tabular-nums'}>{Number.isFinite(l.amount) ? n2(l.amount) : 'not a number'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead><tr style={muted}><th className={th}>Date</th><th className={th}>Description</th><th className={th}>Ref</th><th className={th + ' text-right'}>Amount</th></tr></thead>
+                <tbody>
+                  {lines.slice(0, 8).map((l, i) => (
+                    <tr key={i} className="border-t" style={{ borderColor: 'var(--border)', color: !l.date || !Number.isFinite(l.amount) ? '#ef4444' : undefined }}>
+                      <td className={td}>{l.at ? l.at.slice(0, 16).replace('T', ' ') : l.date ?? 'not a date'}</td>
+                      <td className={td}>{l.description}</td><td className={td}>{l.reference}</td>
+                      <td className={td + ' text-right tabular-nums'}>{Number.isFinite(l.amount) ? n2(l.amount) : 'not a number'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <p className="text-xs" style={{ color: bad ? '#F59E0B' : 'var(--muted-foreground)' }}>
               {good.length} line(s) to import{bad ? `; ${bad} line(s) without a readable date or amount will be left out — check the columns` : ''}.
             </p>
@@ -364,17 +366,19 @@ export default function BankReconciliationTab({ chart }: { chart: AccountRow[] }
             {(['BOOK', 'STATEMENT'] as const).map((side) => (
               <div key={side} className="rounded-xl border overflow-x-auto" style={card}>
                 <div className="px-3 py-2 text-xs font-semibold">{side === 'BOOK' ? 'In the books, not on the statement' : 'On the statement, not in the books'}</div>
-                <table className="w-full"><tbody>
-                  {items.filter((i) => i.side === side).map((i) => (
-                    <tr key={i.side + i.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                      <td className={td}><input type="checkbox" checked={picked.has(i.side + i.id)} onChange={() => toggle(i)} /></td>
-                      <td className={td} style={{ color: stale(i) ? '#ef4444' : undefined }}>{i.onDate.slice(0, 10)}</td>
-                      <td className={td}>{i.description}<div style={muted}>{i.reference}</div></td>
-                      <td className={td + ' text-right tabular-nums'}>{n2(i.amount)}</td>
-                      <td className={td}>{side === 'STATEMENT' && <button className="underline" style={muted} onClick={() => setPost({ item: i, code: '6100', memo: i.description ?? '' })}>post</button>}</td>
-                    </tr>
-                  ))}
-                </tbody></table>
+                <div className="overflow-x-auto">
+                  <table className="w-full"><tbody>
+                    {items.filter((i) => i.side === side).map((i) => (
+                      <tr key={i.side + i.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                        <td className={td}><input type="checkbox" checked={picked.has(i.side + i.id)} onChange={() => toggle(i)} /></td>
+                        <td className={td} style={{ color: stale(i) ? '#ef4444' : undefined }}>{i.onDate.slice(0, 10)}</td>
+                        <td className={td}>{i.description}<div style={muted}>{i.reference}</div></td>
+                        <td className={td + ' text-right tabular-nums'}>{n2(i.amount)}</td>
+                        <td className={td}>{side === 'STATEMENT' && <button className="underline" style={muted} onClick={() => setPost({ item: i, code: '6100', memo: i.description ?? '' })}>post</button>}</td>
+                      </tr>
+                    ))}
+                  </tbody></table>
+                </div>
               </div>
             ))}
           </div>

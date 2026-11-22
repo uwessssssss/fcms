@@ -616,32 +616,34 @@ export default function CreditCustomersContent() {
                 <input type="date" className="input-field text-xs" value={stmtTo} onChange={(e) => setStmtTo(e.target.value)} />
               </div>
             </div>
-            <table className="w-full text-xs">
-              <thead>
-                <tr style={{ color: 'var(--muted-foreground)' }}>
-                  {['Date', 'What', 'Reference', 'Vehicle', 'Litres', 'Charged', 'Paid', 'Balance'].map((h) => (
-                    <th key={h} className="text-left p-2">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {stmt.map((l, i) => (
-                  <tr key={`${l.at}-${i}`} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                    <td className="p-2">{new Date(l.at).toLocaleDateString()}</td>
-                    <td className="p-2">{l.kind.toLowerCase().replace(/_/g, ' ')}</td>
-                    <td className="p-2">{l.reference}</td>
-                    <td className="p-2">{l.vehicle ?? ''}</td>
-                    <td className="p-2">{l.litres === null ? '' : l.litres.toLocaleString()}</td>
-                    <td className="p-2">{l.debit ? l.debit.toLocaleString() : ''}</td>
-                    <td className="p-2">{l.credit ? l.credit.toLocaleString() : ''}</td>
-                    <td className="p-2 font-semibold">{l.runningBalance.toLocaleString()}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr style={{ color: 'var(--muted-foreground)' }}>
+                    {['Date', 'What', 'Reference', 'Vehicle', 'Litres', 'Charged', 'Paid', 'Balance'].map((h) => (
+                      <th key={h} className="text-left p-2">{h}</th>
+                    ))}
                   </tr>
-                ))}
-                {stmt.length === 0 && (
-                  <tr><td colSpan={8} className="p-4 text-center" style={{ color: 'var(--muted-foreground)' }}>Nothing in this period.</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stmt.map((l, i) => (
+                    <tr key={`${l.at}-${i}`} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                      <td className="p-2">{new Date(l.at).toLocaleDateString()}</td>
+                      <td className="p-2">{l.kind.toLowerCase().replace(/_/g, ' ')}</td>
+                      <td className="p-2">{l.reference}</td>
+                      <td className="p-2">{l.vehicle ?? ''}</td>
+                      <td className="p-2">{l.litres === null ? '' : l.litres.toLocaleString()}</td>
+                      <td className="p-2">{l.debit ? l.debit.toLocaleString() : ''}</td>
+                      <td className="p-2">{l.credit ? l.credit.toLocaleString() : ''}</td>
+                      <td className="p-2 font-semibold">{l.runningBalance.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {stmt.length === 0 && (
+                    <tr><td colSpan={8} className="p-4 text-center" style={{ color: 'var(--muted-foreground)' }}>Nothing in this period.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => window.print()} className="px-3 py-2 rounded-xl text-sm font-semibold"
                       style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>Print</button>

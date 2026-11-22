@@ -327,27 +327,29 @@ export default function SuppliersContent() {
               the margin is overstated by their value. Record the tank&apos;s opening balance or delivery cost.
             </p>
           )}
-          <table className="w-full text-xs">
-            <tbody>
-              {([
-                ['Fuel revenue', pl.fuelRevenue, false], ['Fuel cost', -pl.fuelCost, false], ['Fuel margin', pl.fuelMargin, true],
-                ['Shop revenue', pl.shopRevenue, false], ['Shop cost', -pl.shopCost, false], ['Shop margin', pl.shopMargin, true],
-                ['Gross margin', pl.grossMargin, true],
-                ['Expenses', -pl.expenses, false], ['Stock loss', -pl.stockLossValue, false],
-                ['Shortages not recovered', -(pl.shortagesRaised - pl.shortagesRecovered), false],
-                ['Discounts given', -pl.discountsGiven, false], ['Fuel used in-house', -pl.ownUseCost, false],
-                ['Lost in transit (paid for, never received)', -pl.transitLossValue, false],
-                ['Net position', pl.netPosition, true],
-              ] as [string, number, boolean][]).map(([k, v, strong]) => (
-                <tr key={k} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                  <td className={`p-2 ${strong ? 'font-semibold text-foreground' : ''}`} style={strong ? undefined : { color: 'var(--muted-foreground)' }}>{k}</td>
-                  <td className={`p-2 text-right ${strong ? 'font-bold' : ''}`} style={{ color: v < 0 && strong ? '#ef4444' : 'var(--foreground)' }}>
-                    UGX {fmt(v)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <tbody>
+                {([
+                  ['Fuel revenue', pl.fuelRevenue, false], ['Fuel cost', -pl.fuelCost, false], ['Fuel margin', pl.fuelMargin, true],
+                  ['Shop revenue', pl.shopRevenue, false], ['Shop cost', -pl.shopCost, false], ['Shop margin', pl.shopMargin, true],
+                  ['Gross margin', pl.grossMargin, true],
+                  ['Expenses', -pl.expenses, false], ['Stock loss', -pl.stockLossValue, false],
+                  ['Shortages not recovered', -(pl.shortagesRaised - pl.shortagesRecovered), false],
+                  ['Discounts given', -pl.discountsGiven, false], ['Fuel used in-house', -pl.ownUseCost, false],
+                  ['Lost in transit (paid for, never received)', -pl.transitLossValue, false],
+                  ['Net position', pl.netPosition, true],
+                ] as [string, number, boolean][]).map(([k, v, strong]) => (
+                  <tr key={k} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                    <td className={`p-2 ${strong ? 'font-semibold text-foreground' : ''}`} style={strong ? undefined : { color: 'var(--muted-foreground)' }}>{k}</td>
+                    <td className={`p-2 text-right ${strong ? 'font-bold' : ''}`} style={{ color: v < 0 && strong ? '#ef4444' : 'var(--foreground)' }}>
+                      UGX {fmt(v)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {pl.expenseBreakdown.length > 0 && (
             <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
               Expenses by category: {pl.expenseBreakdown.map((c) => `${c.category.toLowerCase().replace('_', ' ')} ${fmt(c.amount)}`).join(' · ')}
