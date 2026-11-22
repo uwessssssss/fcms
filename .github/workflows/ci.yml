@@ -192,15 +192,16 @@ jobs:
           node contracts.cjs ../../web > contracts.json
           set +e
           node e2e.mjs;    screens=$?
-          # the same screens at phone width, for two roles (reviewed, not gated)
-          OUT=out-phone VIEWPORT=390x844 USERS=HO01,SUP01 node e2e.mjs > out-phone.log 2>&1 || true
+          # the same screens at phone width, for every role; gated like the rest
+          OUT=out-phone VIEWPORT=390x844 node e2e.mjs > out-phone.log 2>&1; phone=$?
+          tail -40 out-phone.log
           node values.mjs; values=$?
           # these close shifts and appoint people in the demo: after the rest
           node closeflow.mjs; closescreen=$?
           node flow.mjs;   flow=$?
           # the shift it closed, recomputed from its readings with the rest
           psql -d fcms -X -q -v ON_ERROR_STOP=1 -f ../../tools/audit/shift_math.sql | grep "SHIFT MATH"; audit=${PIPESTATUS[0]}
-          exit $(( screens || values || closescreen || flow || audit ))
+          exit $(( screens || phone || values || closescreen || flow || audit ))
 
       - name: Publish the screenshots for review (demo data only)
         if: always() && github.event_name == 'push'

@@ -93,8 +93,8 @@ cd ..
 ### Or: three months of trading instead of the one demo day
 
 `db/sim/fcms_sim.dump` is 90 days at the demo station: 180 shifts, about 2,000
-cash drops, deliveries, 7 price changes, credit customers paying, banking,
-bills, three real fuel losses and eleven short cash-ups for the system to
+cash drops, deliveries, 8 price changes (16 product prices), credit customers paying, banking,
+bills, three real fuel losses and 13 short cash-ups for the system to
 catch. Every row went through the real functions at the moment it happened
 (`tools/sim/README.md` says how).
 

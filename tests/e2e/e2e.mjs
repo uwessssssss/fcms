@@ -92,7 +92,11 @@ const check = (area, name, ok, detail = '') => { checks.push({ area, name, ok, d
 // with Proxy__TrustForwardedFor=true (as behind Caddy), so each simulated person
 // comes from an address of their own; the limit itself is checked on purpose.
 let ipSeq = 10;
-const nextIp = () => `10.20.0.${ipSeq++}`;
+// Each pass its own block of addresses: the phone pass runs within the sign-in
+// limiter's five-minute window of the desktop pass, and sharing addresses
+// would spend its allowance.
+const IP_BLOCK = process.env.VIEWPORT && process.env.VIEWPORT !== '1440x900' ? 21 : 20;
+const nextIp = () => `10.${IP_BLOCK}.${Math.floor(ipSeq / 250)}.${(ipSeq++ % 250) + 1}`;
 
 async function apiChecks() {
   let ip = nextIp();
@@ -246,23 +250,30 @@ async function visit(page, log, user, route, tab) {
   }).catch(() => []);
   const shot = `shots/${safe(user)}__${safe(route)}${tab ? '__' + safe(tab) : ''}.png`;
   // The app scrolls inside its own panels, so a "full page" shot stopped at
-  // the fold. Unclip every scrolling panel first, so the shot is the whole screen.
-  await page.evaluate(() => {
-    for (const el of [document.documentElement, document.body, ...document.querySelectorAll('*')]) {
+  // the fold. Inner panels (a list with a max height) are unclipped; the main
+  // panel and its frame are not touched -- CSS will not let a box that scrolls
+  // sideways be unclipped vertically, so Reports and Payments stayed one screen
+  // tall. Instead the window is made as tall as the main panel's content, the
+  // shot taken, and the window put back.
+  const need = await page.evaluate(() => {
+    const main = document.querySelector('main');
+    const frame = new Set();
+    for (let e = main; e; e = e.parentElement) frame.add(e);
+    for (const el of document.querySelectorAll('main *')) {
       const cs = getComputedStyle(el);
-      if (/(auto|scroll|hidden)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 4 && !el.closest('table')) {
-        // Free both axes unless the box really scrolls sideways (a wide table):
-        // freeing that one spilled the table and widened the whole phone
-        // screenshot. CSS turns a lone overflow-y:visible back into auto, so
-        // the vertical one alone does not unclip.
+      if (/(auto|scroll|hidden)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 4 && !el.closest('table') && !frame.has(el)) {
         if (el.scrollWidth > el.clientWidth + 2) el.style.overflowY = 'visible';
         else el.style.overflow = 'visible';
         el.style.height = 'auto'; el.style.maxHeight = 'none';
       }
     }
-    document.documentElement.style.height = 'auto'; document.body.style.height = 'auto';
-  }).catch(() => {});
+    if (!main) return document.documentElement.scrollHeight;
+    return Math.ceil(main.getBoundingClientRect().top + main.scrollHeight);
+  }).catch(() => VH);
+  const tall = Math.min(Math.max(need, VH), 16000);
+  if (tall > VH) { await page.setViewportSize({ width: VW, height: tall }); await page.waitForTimeout(300); }
   await page.screenshot({ path: path.join(OUT, shot), fullPage: true }).catch(() => {});
+  if (tall > VH) await page.setViewportSize({ width: VW, height: VH });
   pages.push({ user, route, tab: tab || '', ok: issues.length === 0, issues, forbidden, display, shot });
   console.log(`${issues.length ? 'ISSUE' : 'ok   '} ${user} ${route}${tab ? ' > ' + tab : ''}${issues.length ? ' :: ' + issues.slice(0, 2).join(' | ') : ''}${forbidden.length ? ' [refused: ' + [...new Set(forbidden)].join(', ') + ']' : ''}${display.length ? ' {display: ' + display.join(' | ') + '}' : ''}`);
 }
@@ -372,6 +383,21 @@ async function passwordChange(browser) {
     }
   } catch (e) { check('password', 'change password end to end', false, e.message.split('\n')[0]); }
   await ctx.close();
+  // Put the password back, so the next pass (the phone run, a rerun) starts
+  // from the same place. The phone pass failed here: the desktop pass had
+  // already changed it.
+  if (!SKIP_API) {
+    const pip = nextIp();
+    const login = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': pip },
+      body: JSON.stringify({ employeeNo: CHANGE_PW_USER, password: NEW_PASSWORD }) });
+    if (login.ok) {
+      const { token } = await login.json();
+      const back = await fetch(API + '/api/auth/change-password', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': pip, Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ currentPassword: NEW_PASSWORD, newPassword: PASSWORD }) });
+      check('password', 'the original password is put back afterwards', back.ok, String(back.status));
+    }
+  }
 }
 
 // ---- run ---------------------------------------------------------------------
