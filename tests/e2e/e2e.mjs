@@ -32,7 +32,7 @@ const SKIP_API = process.env.SKIP_API === '1';          // dry runs against a mo
 const OUT = path.resolve(process.env.OUT || 'out');
 fs.mkdirSync(path.join(OUT, 'shots'), { recursive: true });
 
-const USERS = (process.env.USERS || 'HO01,SYSADMIN,MGR01,SUP01,ACC01').split(',');
+const USERS = (process.env.USERS || 'HO01,SYSADMIN,DIR01,AUD01,MGR01,SUP01,ACC01,DEP01').split(',');
 const CHANGE_PW_USER = process.env.CHANGE_PW_USER || 'SUP02';
 const ALL_ROUTES = fs.readFileSync(new URL('./routes.txt', import.meta.url), 'utf8')
   .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
@@ -50,6 +50,34 @@ const TABS = {   // screen -> tab labels, opened by head office
     'Dipping Report', 'Expenses Report', 'Credit Statement', 'Payments Breakdown', 'Variances Report', 'Pump Performance'],
 };
 const ERROR_TEXT = /Something went wrong|Application error|Unhandled Runtime Error|Cannot read properties|is not a function|undefined is not|NaN|Invalid Date|\[object Object\]/;
+
+// What each screen expects of each call (contracts.cjs). A field a screen
+// reads that the API does not send is a blank or broken field on screen.
+const CONTRACTS = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.resolve(process.env.CONTRACTS || 'contracts.json'), 'utf8')).map((c) => ({
+      ...c, re: new RegExp('^' + c.path.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/(\{\})+/g, '[^/]+') + '$'),
+      lit: c.path.replace(/\{\}/g, '').length,
+    }));
+  } catch { return []; }
+})();
+const contractFaults = new Map();   // key -> { call, file, type, missing }
+function checkContract(apiPath, body) {
+  for (const c of CONTRACTS) {
+    if (!c.re.test(apiPath)) continue;
+    const rows = c.array ? (Array.isArray(body) ? body.slice(0, 5) : null) : [body];
+    if (!rows) { contractFaults.set(`${apiPath}|${c.file}|shape`, { call: apiPath, file: c.file, type: c.type, missing: ['(expected a list)'] }); continue; }
+    const missing = new Set();
+    for (const r of rows) {
+      if (!r || typeof r !== 'object') continue;
+      for (const k of c.required) if (!(k in r)) missing.add(k);
+      for (const [k, sub] of Object.entries(c.nested || {})) for (const e of (Array.isArray(r[k]) ? r[k].slice(0, 5) : [])) {
+        if (e && typeof e === 'object') for (const kk of sub.required) if (!(kk in e)) missing.add(`${k}[].${kk}`);
+      }
+    }
+    if (missing.size) contractFaults.set(`${c.re}|${c.file}`, { call: c.path, file: c.file, type: c.type, missing: [...missing].sort() });
+  }
+}
 
 const checks = [];      // { area, name, ok, detail }
 const pages = [];       // { user, route, tab, ok, issues[], forbidden[], shot }
@@ -127,7 +155,12 @@ async function watch(page) {
     if (q.url().startsWith(API) && q.failure()?.errorText !== 'net::ERR_ABORTED') log.failed.push(`${q.method()} ${q.url().replace(API, '')} ${q.failure()?.errorText}`);
   });
   page.on('response', async (res) => {
-    if (!res.url().startsWith(API) || res.status() < 400) return;
+    if (!res.url().startsWith(API)) return;
+    if (res.status() < 300 && res.request().method() === 'GET') {
+      try { checkContract(new URL(res.url()).pathname, await res.json()); } catch { /* not JSON */ }
+      return;
+    }
+    if (res.status() < 400) return;
     let body = ''; try { body = (await res.text()).slice(0, 160); } catch { /* gone */ }
     log.api.push({ status: res.status(), call: `${res.request().method()} ${res.url().replace(API, '').split('?')[0]}`, body });
   });
@@ -211,7 +244,7 @@ async function browserChecks(browser) {
     // The demo turns "change it at first sign-in" off; a fresh install sends
     // the person to /change-password first, which has no sidebar.
     // Company roles land on the dashboard; a station's people on their site.
-    const home = ['HO01', 'SYSADMIN'].includes(user) ? '/' : '/site-operations-detail';
+    const home = ['HO01', 'SYSADMIN', 'DIR01', 'AUD01'].includes(user) ? '/' : '/site-operations-detail';
     check('browser', `${user} signs in and lands on ${home}`, landed === home, landed);
     if (landed !== home) { await page.goto(BASE + home, { waitUntil: 'domcontentloaded' }); await settle(page); }
     // The screens this role's sidebar offers; head office opens them all.
@@ -299,6 +332,10 @@ await browserChecks(browser);
 await passwordChange(browser);
 await browser.close();
 
+const faults = [...contractFaults.values()];
+check('fields', `every response has the fields its screen reads (${CONTRACTS.length} contracts)`, CONTRACTS.length > 0 && faults.length === 0,
+  faults.length ? `${faults.length} mismatch(es)` : '');
+for (const f of faults) console.log(`FIELDS ${f.call} -> ${f.type} (${f.file}): missing ${f.missing.join(', ')}`);
 const badPages = pages.filter((p) => !p.ok);
 const badChecks = checks.filter((c) => !c.ok);
 fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify({ checks, pages }, null, 1));
@@ -307,6 +344,8 @@ const md = [
   `${checks.length - badChecks.length} of ${checks.length} checks pass; ${pages.length - badPages.length} of ${pages.length} screens clean.`, '',
   '## Checks', '', '| | Area | Check | Detail |', '|---|---|---|---|',
   ...checks.map((c) => `| ${c.ok ? 'PASS' : '**FAIL**'} | ${c.area} | ${c.name} | ${String(c.detail).replace(/\|/g, '/').slice(0, 160)} |`), '',
+  '## Fields a screen reads that the API does not send', '',
+  ...(faults.length ? faults.map((f) => `- \`${f.call}\` -> ${f.type} (${f.file}): **${f.missing.join(', ')}**`) : ['None.']), '',
   '## Screens with issues', '',
   ...(badPages.length ? badPages.map((p) => `- **${p.user} ${p.route}${p.tab ? ' > ' + p.tab : ''}**: ${p.issues.map((i) => i.replace(/\|/g, '/')).join('; ')}`) : ['None.']), '',
   '## Refused by role (403), for information', '',

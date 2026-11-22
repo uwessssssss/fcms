@@ -1,5 +1,6 @@
 'use client';
 import { api, ApiError, setToken } from '@/lib/api';
+import { isCompanyWide } from '@/lib/roles';
 import type { LoginResponse } from '@/types/api';
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -81,7 +82,7 @@ export default function LoginContent() {
           .slice(0, 2)
           .join('')
           .toUpperCase(),
-        scope: ['DIRECTOR', 'SYSTEM_ADMIN', 'HEAD_OFFICE'].includes(res.role) ? 'All sites' : 'This site',
+        scope: isCompanyWide(res.role) ? 'All sites' : 'This site',
         scopeDetail: res.permissions.length + ' permissions',
         permissions: res.permissions,
         // A director sees every site; everyone else is scoped to theirs. The
@@ -90,7 +91,7 @@ export default function LoginContent() {
         // The id; AuthContext looks up the station's name (W1).
         assignedSite: null,
         assignedSiteId:
-          ['DIRECTOR', 'SYSTEM_ADMIN', 'HEAD_OFFICE'].includes(res.role) ? null : res.siteId,
+          isCompanyWide(res.role) ? null : res.siteId,
         staffId: res.staffId,
       });
 

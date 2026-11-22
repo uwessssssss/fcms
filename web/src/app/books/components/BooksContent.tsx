@@ -10,6 +10,7 @@
  * here by hand are a manual journal, a reversal and closing a month.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isCompanyWide } from '@/lib/roles';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import BankReconciliationTab from './BankReconciliation';
@@ -590,7 +591,7 @@ export default function BooksContent() {
   // The company-wide controls are head office's (the API refuses a station);
   // a station's books open on its trial balance instead of on a refusal. (D4)
   const { user } = useAuth();
-  const companyWide = !user || ['head-office', 'system-admin', 'director'].includes(user.role);
+  const companyWide = !user || isCompanyWide(user.role);
   const tabs = companyWide ? TABS : TABS.filter(([k]) => k !== 'recs');
   const [tab, setTab] = useState<Tab>(companyWide ? 'recs' : 'tb');
   const [code, setCode] = useState('');

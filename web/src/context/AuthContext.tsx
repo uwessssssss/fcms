@@ -1,5 +1,6 @@
 'use client';
 import { api, ApiError, setToken, SESSION_ENDED_EVENT } from '@/lib/api';
+import { isCompanyWide } from '@/lib/roles';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 /** What GET /api/auth/me returns. */
@@ -90,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void api
       .get<MeResponse>('/api/auth/me')
       .then((me) => {
-        const wide = ['DIRECTOR', 'SYSTEM_ADMIN', 'HEAD_OFFICE'].includes(me.role);
+        const wide = isCompanyWide(me.role);
         const fresh: AuthUser = {
           ...base,
           role: me.role.toLowerCase().replace('_', '-'),
@@ -205,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Scoped to one site unless the role runs the company or the platform.
-  const isSiteManager = !!user && !['head-office', 'system-admin', 'director'].includes(user.role);
+  const isSiteManager = !!user && !isCompanyWide(user.role);
   const assignedSite = user?.assignedSite ?? null;
   const assignedSiteId = user?.assignedSiteId ?? null;
 

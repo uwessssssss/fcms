@@ -1,5 +1,6 @@
 'use client';
 import { useHasDepot } from '@/lib/useHasDepot';
+import { isCompanyWide } from '@/lib/roles';
 import { useOpenAlerts } from '@/lib/useOpenAlerts';
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -77,8 +78,7 @@ interface SidebarProps {
 export function useVisibleNav(): NavItem[] {
   const { user } = useAuth();
   const hasDepot = useHasDepot();
-  const companyWide = ['head-office', 'system-admin', 'director'];
-  const isHeadOffice = !user || companyWide.includes(user.role);
+  const isHeadOffice = !user || isCompanyWide(user.role);
   return navItems.filter((n) => {
     if (n.headOfficeOnly && !isHeadOffice) return false;
     // Companies was shown to head office and directors, who were then refused
@@ -115,9 +115,8 @@ export default function Sidebar({ currentPath = '/', mobileOpen = false, onNavig
   // for 'head-office' alone, so a system administrator -- the person who
   // creates companies -- was treated as a site manager, and the Companies
   // screen was hidden from the only person allowed to use it.
-  const COMPANY_WIDE = ['head-office', 'system-admin', 'director'];
-  const isHeadOffice = !user || COMPANY_WIDE.includes(user.role);
-  const isSiteManager = !!user && !COMPANY_WIDE.includes(user.role);
+  const isHeadOffice = !user || isCompanyWide(user.role);
+  const isSiteManager = !!user && !isCompanyWide(user.role);
 
   const handleLogout = () => {
     logout();

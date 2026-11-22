@@ -55,6 +55,12 @@ jobs:
         run: |
           sudo apt-get install -y -q gcc >/dev/null
           bash tools/sim/run.sh 14
+      - name: Two more random months (the seeds that once broke wallet matching)
+        env:
+          SIM_NO_DUMP: "1"
+        run: |
+          SIM_SEED=97 bash tools/sim/run.sh 30
+          SIM_SEED=555 bash tools/sim/run.sh 30
 
   static:
     runs-on: ubuntu-24.04
@@ -132,7 +138,10 @@ jobs:
         env:
           FCMS_APP_PASSWORD: e2e-app-password
           FCMS_DEMO_DUMP: db/sim/fcms_sim.dump
-        run: bash deploy/db/10-fcms-demo.sh
+        run: |
+          bash deploy/db/10-fcms-demo.sh
+          # the roles the demo has nobody in: director, auditor, depot manager
+          psql -d fcms -X -v pw="$DEMO_PASSWORD" -f tests/e2e/extra-roles.sql
 
       - name: API -- build and start
         run: |
@@ -157,21 +166,29 @@ jobs:
           for i in $(seq 1 60); do curl -fs http://localhost:3000/sign-up-login-screen >/dev/null && break; sleep 2; done
           curl -fsS -o /dev/null http://localhost:3000/sign-up-login-screen || (cat /tmp/web.log; exit 1)
 
-      - name: Browser -- every role, every screen
+      - name: Browser -- every role, every screen, every field, the numbers
         working-directory: tests/e2e
         env:
           BASE: http://localhost:3000
           API: http://localhost:5000
           PASSWORD: "Demo-2026!"
+          PGUSER: postgres
+          PGDATABASE: fcms
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
-          node e2e.mjs
+          # what each screen expects of each call, from the real TypeScript
+          node contracts.cjs ../../web > contracts.json
+          set +e
+          node e2e.mjs;    screens=$?
+          node values.mjs; values=$?
+          exit $(( screens || values ))
 
       - name: Report
         if: always()
         run: |
           cat tests/e2e/out/REPORT.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "no report" >> "$GITHUB_STEP_SUMMARY"
+          cat tests/e2e/out/VALUES.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
           cp /tmp/api.log /tmp/web.log tests/e2e/out/ 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
