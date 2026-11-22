@@ -49,6 +49,8 @@ public sealed class ProductRow
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public decimal? PumpPrice { get; set; }
+    /// <summary>The books' average cost of a litre in stock, weighted by stock.</summary>
+    public decimal? CostPrice { get; set; }
     public decimal StockLitres { get; set; }
     public int TankCount { get; set; }
     public bool IsActive { get; set; }
@@ -86,6 +88,9 @@ public sealed class SettingRow
 /// </summary>
 public sealed class CatalogueService
 {
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
 
@@ -201,23 +206,33 @@ public sealed class CatalogueService
             SELECT p.id          AS Id,
                    p.code        AS Code,
                    p.name        AS Name,
+                   -- A station's own price; head office, the latest across its
+                   -- stations (it read head office's own, which has none: UGX 0).
                    (SELECT pc.new_price
                       FROM price_change pc
                      WHERE pc.product_id = p.id
-                       AND pc.site_id = @site
+                       AND (@site::uuid IS NULL OR pc.site_id = @site)
                        AND pc.status = 'EXECUTED'
                      ORDER BY pc.effective_from DESC
                      LIMIT 1)    AS PumpPrice,
+                   -- What a litre in stock cost: the books' average, weighted by stock.
+                   (SELECT round(SUM(fn_book_stock(t.id) * fn_gl_tank_avg(t.id)) / NULLIF(SUM(fn_book_stock(t.id)), 0), 2)
+                      FROM tank t
+                     WHERE t.product_id = p.id AND t.is_active
+                       AND (@site::uuid IS NULL OR t.site_id = @site)) AS CostPrice,
+                   -- A station's own tanks (it was shown the whole company's).
                    COALESCE((SELECT SUM(fn_book_stock(t.id))
                                FROM tank t
-                              WHERE t.product_id = p.id AND t.is_active), 0) AS StockLitres,
+                              WHERE t.product_id = p.id AND t.is_active
+                                AND (@site::uuid IS NULL OR t.site_id = @site)), 0) AS StockLitres,
                    (SELECT count(*) FROM tank t
-                     WHERE t.product_id = p.id AND t.is_active)::int      AS TankCount,
+                     WHERE t.product_id = p.id AND t.is_active
+                       AND (@site::uuid IS NULL OR t.site_id = @site))::int AS TankCount,
                    p.is_active   AS IsActive
               FROM product p
              ORDER BY p.code
             """,
-            new { site = _user.SiteId },
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 

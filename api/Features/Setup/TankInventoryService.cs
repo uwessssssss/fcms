@@ -51,6 +51,9 @@ public sealed class TankInventoryRow
 /// </summary>
 public sealed class TankInventoryService
 {
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
 
@@ -138,8 +141,12 @@ public sealed class TankInventoryService
               LEFT JOIN last_delivery ld ON ld.tank_id = t.id
               LEFT JOIN throughput tp    ON tp.tank_id = t.id
              WHERE t.is_active
+               -- A station's own tanks; head office every site's. Station staff
+               -- were sent every station's stock and screens filtered it after.
+               AND (@site::uuid IS NULL OR t.site_id = @site)
              ORDER BY si.name, t.code
             """,
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 }

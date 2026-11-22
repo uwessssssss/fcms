@@ -311,7 +311,7 @@ export default function ExpensesContent() {
                   <td className="px-4 py-3">
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--muted)', color: 'var(--foreground)' }}>{exp.category}</span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-foreground max-w-[180px] truncate">{exp.description}</td>
+                  <td className="px-4 py-3 text-xs text-foreground max-w-[180px] truncate" title={exp.description}>{exp.description}</td>
                   <td className="px-4 py-3 font-mono-nums text-xs font-semibold text-foreground">UGX {fmt(exp.amount)}</td>
                   <td className="px-4 py-3">
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${pmColor[exp.paymentMethod]}20`, color: pmColor[exp.paymentMethod] }}>{pmLabel[exp.paymentMethod]}</span>

@@ -35,6 +35,9 @@ public sealed class StaffRow
     public DateTime? LastLoginAt { get; set; }
     public DateTime? LockedUntil { get; set; }
     public int ActiveSessions { get; set; }
+    /// <summary>Where they work. Screens filtered and showed people by site
+    /// with no site to go on.</summary>
+    public string SiteName { get; set; } = "";
 }
 
 public record UpsertStaff(string EmployeeNo, string FullName, string Role,
@@ -50,6 +53,8 @@ public sealed class EquipmentRow
     public string? ParentCode { get; set; }
     public bool IsActive { get; set; }
     public bool InUse { get; set; }
+    /// <summary>A nozzle's tank; null for tanks and pumps.</summary>
+    public Guid? TankId { get; set; }
 }
 
 public record UpsertTank(string Code, Guid ProductId, decimal NominalLitres,
@@ -110,6 +115,9 @@ public sealed class PolicyRow
     public decimal WaterAlarmLitres { get; set; }
     public bool AllowDipAboveChart { get; set; }
     public decimal MeterDivergencePct { get; set; }
+    /// <summary>The most the electronic and manual meters' litres may differ at a
+    /// close (730); beyond it the close needs a reason. Nullable as the cap is.</summary>
+    public decimal? MeterPairToleranceLitres { get; set; }
     public decimal PumpTestTolerancePct { get; set; }
     public decimal TransitLossPct { get; set; }
     public int PostDecantSettleMin { get; set; }
@@ -177,7 +185,8 @@ public sealed class AdminService
                    s.is_active AS IsActive, s.is_operator AS IsOperator,
                    (c.staff_id IS NOT NULL) AS HasPassword,
                    c.last_login_at AS LastLoginAt, c.locked_until AS LockedUntil,
-                   COALESCE(sess.n, 0) AS ActiveSessions
+                   COALESCE(sess.n, 0) AS ActiveSessions,
+                   COALESCE((SELECT name FROM site WHERE id = s.site_id), '') AS SiteName
               FROM staff s
               LEFT JOIN staff_credential c ON c.staff_id = s.id
               LEFT JOIN LATERAL (
@@ -372,30 +381,35 @@ public sealed class AdminService
         return (await conn.QueryAsync<EquipmentRow>(new CommandDefinition(
             """
             SELECT t.id AS Id, 'TANK' AS Kind, t.code AS Code,
-                   p.code || ' * ' || t.nominal_litres || ' L nominal, '
-                     || t.safe_fill || ' L safe fill' AS Detail,
+                   p.code || ' · ' || to_char(t.nominal_litres, 'FM999,999,990') || ' L, safe fill '
+                     || to_char(t.safe_fill, 'FM999,999,990') || ' L' AS Detail,
                    NULL::text AS ParentCode, t.is_active AS IsActive,
-                   (fn_book_stock(t.id) > t.dead_stock) AS InUse
+                   (fn_book_stock(t.id) > t.dead_stock) AS InUse,
+                   NULL::uuid AS TankId
               FROM tank t JOIN product p ON p.id = t.product_id
              WHERE t.site_id = @site
 
             UNION ALL
             SELECT pu.id, 'PUMP', pu.code,
                    COALESCE(pu.make, '') ||
-                     COALESCE(' * ' || pu.serial_no, ''),
+                     COALESCE(' · ' || pu.serial_no, ''),
                    NULL, pu.is_active,
                    EXISTS (SELECT 1 FROM nozzle n
                             JOIN nozzle_assignment na ON na.nozzle_id = n.id
-                           WHERE n.pump_id = pu.id AND na.state = 'ACTIVE')
+                           WHERE n.pump_id = pu.id AND na.state = 'ACTIVE'),
+                   NULL::uuid
               FROM pump pu WHERE pu.site_id = @site
 
             UNION ALL
             SELECT n.id, 'NOZZLE', n.code,
-                   p.code || ' from ' || t.code || ' * '
+                   p.code || ' from ' || t.code || ' · '
                      || n.integer_digits || '-digit meter',
                    pu.code, n.is_active,
                    EXISTS (SELECT 1 FROM nozzle_assignment na
-                            WHERE na.nozzle_id = n.id AND na.state = 'ACTIVE')
+                            WHERE na.nozzle_id = n.id AND na.state = 'ACTIVE'),
+                   -- the tank it draws from: the screen matched the tank by this
+                   -- row's description, never found it, and said "no tank linked"
+                   t.id
               FROM nozzle n
               JOIN pump pu ON pu.id = n.pump_id
               JOIN tank t  ON t.id = n.tank_id
@@ -757,6 +771,7 @@ public sealed class AdminService
                    water_alarm_litres AS WaterAlarmLitres,
                    allow_dip_above_chart AS AllowDipAboveChart,
                    meter_divergence_pct AS MeterDivergencePct,
+                   meter_pair_tolerance_litres AS MeterPairToleranceLitres,
                    pump_test_tolerance_pct AS PumpTestTolerancePct,
                    transit_loss_pct AS TransitLossPct,
                    post_decant_settle_min AS PostDecantSettleMin,
@@ -796,6 +811,9 @@ public sealed class AdminService
         if (p.DipNoiseLitres is < 0 or > 100)
             throw new DomainException("IMPLAUSIBLE_TOLERANCE",
                 "Dip noise is a few litres -- what the stick cannot read. Above 100 L it would hide real losses.");
+        if (p.MeterPairToleranceLitres is < 0 or > 20)
+            throw new DomainException("IMPLAUSIBLE_TOLERANCE",
+                "The two meters agree to within a litre or so. Above 20 L the check would let real faults through.");
         if (p.AttendantCashCap is < 0)
             throw new DomainException("IMPLAUSIBLE_TOLERANCE",
                 "The cash an attendant may hold cannot be negative. Use 0 to turn the check off.");
@@ -814,6 +832,7 @@ public sealed class AdminService
                   water_alarm_litres = @WaterAlarmLitres,
                   allow_dip_above_chart = @AllowDipAboveChart,
                   meter_divergence_pct = @MeterDivergencePct,
+                  meter_pair_tolerance_litres = COALESCE(@MeterPairToleranceLitres, meter_pair_tolerance_litres),
                   pump_test_tolerance_pct = @PumpTestTolerancePct,
                   transit_loss_pct = @TransitLossPct,
                   post_decant_settle_min = @PostDecantSettleMin,
@@ -832,7 +851,7 @@ public sealed class AdminService
                 {
                     p.ShiftVariancePct, p.ShiftVarianceLitres, p.MonthlyVariancePct,
                     p.DipAgreementMm, p.WaterAlarmMm, p.WaterAlarmLitres, p.AllowDipAboveChart,
-                    p.MeterDivergencePct, p.PumpTestTolerancePct, p.TransitLossPct,
+                    p.MeterDivergencePct, p.MeterPairToleranceLitres, p.PumpTestTolerancePct, p.TransitLossPct,
                     p.PostDecantSettleMin, p.CashVarianceAlert, p.AttendantCashCap, p.DipNoiseLitres, p.MaxShortageCarry,
                     p.RequireSecondApproverAbove, p.BreakShiftOnPriceChange,
                     p.AllowCreditSales, p.EvidenceGraceHours, tenant = _user.TenantId

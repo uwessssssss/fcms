@@ -66,17 +66,14 @@ function toDelivery(r: Record<string, unknown>): Delivery {
     supplier: field(r, 'supplier'),
     grade,
     gradeColor: GRADE_COLOUR[grade] ?? '#64748B',
-    // Cost is on the supplier invoice, not the delivery note -- a load is
-    // often priced after it arrives. A number here would be a guess.
-    costPricePerLitre: 0,
-    driverName: '',
+    // The cost the load was received at, and the two dips that prove it --
+    // all on record; they were shown as 0.
+    costPricePerLitre: num(r, 'cost_per_litre'),
+    driverName: field(r, 'driver'),
     vehicleReg: field(r, 'truck'),
-    deliveryDate: field(r, 'date'),
-    // The dips either side of the decant are what PROVE the delivery. The
-    // statement carries the litres received, which is their difference -- so
-    // the two readings are left at zero rather than split out of one figure.
-    dipsBefore: 0,
-    dipsAfter: 0,
+    deliveryDate: field(r, 'date').slice(0, 10),
+    dipsBefore: num(r, 'dip_before'),
+    dipsAfter: num(r, 'dip_after'),
     quantityAt20: num(r, 'received'),
     invoiceQty: num(r, 'on_note'),
     // Negative means the truck brought less than the note claimed, which is

@@ -52,7 +52,7 @@ function toAttendant(r: StaffRow): Attendant {
     // a roster changes every shift. This screen lists who is on strength.
     assignedNozzles: [],
     status: r.isActive ? 'active' : 'inactive',
-    site: '',
+    site: r.siteName,
     joinDate: r.hiredOn ?? '',
   };
 }

@@ -57,7 +57,7 @@ interface Tank {
   fillPct: number;
   status: TankStatus;
   drawRateLPH: number;
-  hoursToEmpty: number;
+  hoursToEmpty: number | null;
   lastDelivery: string;
   nextDelivery: string | null;
 }
@@ -148,7 +148,8 @@ function toSiteTank(r: TankInventoryRow): Tank {
     fillPct: r.fillPct,
     status: r.status as Tank['status'],
     drawRateLPH: r.drawRateLph ?? 0,
-    hoursToEmpty: r.hoursToEmpty ?? 0,
+    // Null when nothing has sold: at no sales a tank does not run out. It was 0, shown as "0.0h".
+    hoursToEmpty: r.hoursToEmpty && r.hoursToEmpty > 0 ? r.hoursToEmpty : null,
     lastDelivery: r.lastDelivery ? r.lastDelivery.slice(0, 10) : '—',
     nextDelivery: null,
   } satisfies Tank;
@@ -337,13 +338,13 @@ export default function SiteOperationsContent() {
                 </span>
               </div>
               <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                {siteData.location} · Site Manager: {siteData.manager}
+                {[siteData.location, siteData.manager ? `Site manager: ${siteData.manager}` : 'No site manager appointed'].filter(Boolean).join(' · ')}
               </p>
               <div className="flex items-center gap-4 mt-2 flex-wrap">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--status-active)' }} />
                   <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                    {activePumpsCount} of {pumps.length} pumps active
+                    {pumps.length ? `${activePumpsCount} of ${pumps.length} pumps active` : 'No pumps (loads by meter or dip)'}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -435,6 +436,11 @@ export default function SiteOperationsContent() {
           {/* Pumps Grid */}
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">Pump Status</h2>
+            {pumps.length === 0 && (
+              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                This site has no pumps set up. A depot loads trucks by meter or dip; its loads are on the Depot screen.
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {pumps.map((pump) => {
                 const cfg = pumpStatusConfig[pump.status] ?? pumpStatusConfig.idle;   // an unknown status must not take the screen down
@@ -539,7 +545,7 @@ export default function SiteOperationsContent() {
                       <div>
                         <p style={{ color: 'var(--muted-foreground)' }}>Hrs to Empty</p>
                         <p className="font-mono-nums font-semibold" style={{ color: tank.status === 'critical' ? 'var(--status-fault)' : 'var(--foreground)' }}>
-                          {tank.hoursToEmpty.toFixed(1)}h
+                          {tank.hoursToEmpty == null ? '—' : `${tank.hoursToEmpty.toFixed(1)}h`}
                         </p>
                       </div>
                     </div>

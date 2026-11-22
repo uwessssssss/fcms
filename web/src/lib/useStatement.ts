@@ -85,7 +85,11 @@ export function useStatement<T>(
 export function field(row: Record<string, unknown>, ...names: string[]): string {
   for (const n of names) {
     const v = row[n];
-    if (v !== null && v !== undefined && v !== "") return String(v);
+    if (v !== null && v !== undefined && v !== "") {
+      // A date column arrives as midnight ("2026-11-17T00:00:00"): show the day.
+      const t = String(v);
+      return /^\d{4}-\d{2}-\d{2}T00:00:00(\.0+)?(Z|[+-]00:00)?$/.test(t) ? t.slice(0, 10) : t;
+    }
   }
   return "";
 }

@@ -303,12 +303,14 @@ public sealed class OrganisationService
         // site, which for head office is none -- so head office could appoint
         // nobody, and a station manager's choice of site was never read.
         var role = req.Role.ToUpperInvariant();
+        // The sign-in's own site: a working site chosen in the top bar must not
+        // turn head office into station staff here.
         var here = await conn.QuerySingleAsync<(Guid? HeadOffice, string? MyKind)>(new CommandDefinition(
             """
             SELECT t.head_office_id, (SELECT kind::text FROM site WHERE id = @mine)
               FROM tenant t WHERE t.id = @tenant
             """,
-            new { tenant = _user.TenantId, mine = _user.SiteId },
+            new { tenant = _user.TenantId, mine = _user.HomeSiteId },
             transaction: _uow.Transaction, cancellationToken: ct));
         Guid site;
         if (role is "HEAD_OFFICE" or "AUDITOR")
@@ -317,10 +319,10 @@ public sealed class OrganisationService
         else if (here.MyKind is "STATION" or "DEPOT")
         {
             // A station's people appoint to their own station only.
-            if (req.SiteId is Guid asked && asked != _user.SiteId)
+            if (req.SiteId is Guid asked && asked != _user.HomeSiteId)
                 throw new DomainException("OWN_SITE_ONLY",
                     "You appoint people to your own station. Head office appoints to the others.", 403);
-            site = _user.SiteId;
+            site = _user.HomeSiteId;
         }
         else
             site = req.SiteId ?? throw new DomainException("SITE_REQUIRED",

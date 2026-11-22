@@ -17,6 +17,8 @@ public sealed class DailyLossRow
     public decimal LossLitres { get; set; }
     public decimal? LossPct { get; set; }
     public decimal LossValue { get; set; }
+    /// <summary>Head office sees every site's tanks: whose this is.</summary>
+    public string SiteName { get; set; } = "";
 }
 
 /// <summary>Dapper target: class with settable properties. See docs/DAPPER.md.</summary>
@@ -78,6 +80,12 @@ public sealed class LossSummary
 /// </summary>
 public sealed class StockLossService
 {
+    // Head office, auditors, the administrator: every site. It read the user's
+    // own site, so for head office every loss report was empty -- and the
+    // Losses screen said "the tanks agree with the books".
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
 
@@ -96,14 +104,15 @@ public sealed class StockLossService
             """
             SELECT business_date AS BusinessDate, product_code AS ProductCode,
                    tank_code AS TankCode, sold_litres AS SoldLitres,
+                   (SELECT name FROM site WHERE id = v_daily_stock_loss.site_id) AS SiteName,
                    received_litres AS ReceivedLitres, book_litres AS BookLitres,
                    actual_litres AS ActualLitres, loss_litres AS LossLitres,
                    loss_pct AS LossPct, loss_value AS LossValue
               FROM v_daily_stock_loss
-             WHERE site_id = @site AND business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR site_id = @site) AND business_date BETWEEN @from AND @to
              ORDER BY business_date DESC, product_code, tank_code
             """,
-            new { site = _user.SiteId, from, to },
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 
@@ -126,10 +135,10 @@ public sealed class StockLossService
                    cumulative_sold_litres AS CumulativeSoldLitres,
                    cumulative_loss_pct AS CumulativeLossPct
               FROM v_cumulative_stock_loss
-             WHERE site_id = @site AND business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR site_id = @site) AND business_date BETWEEN @from AND @to
              ORDER BY product_code, business_date
             """,
-            new { site = _user.SiteId, from, to },
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 
@@ -157,7 +166,7 @@ public sealed class StockLossService
                      SUM(loss_litres) AS loss,
                      SUM(loss_value)  AS value
                 FROM v_daily_stock_loss
-               WHERE site_id = @site AND business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR site_id = @site) AND business_date BETWEEN @from AND @to
                GROUP BY product_code, business_date
             ), worst AS (
               SELECT DISTINCT ON (product_code) product_code, business_date, loss
@@ -188,7 +197,7 @@ public sealed class StockLossService
              GROUP BY d.product_code, w.loss, w.business_date
              ORDER BY d.product_code
             """,
-            new { site = _user.SiteId, from, to },
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 
@@ -210,12 +219,12 @@ public sealed class StockLossService
                    divergence_pct AS DivergencePct,
                    attendant_name AS AttendantName
               FROM v_meter_divergence
-             WHERE site_id = @site AND business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR site_id = @site) AND business_date BETWEEN @from AND @to
                AND electronic_litres IS NOT NULL
              ORDER BY abs(COALESCE(divergence_pct, 0)) DESC, business_date DESC
              LIMIT 200
             """,
-            new { site = _user.SiteId, from, to },
+            new { site = CompanyWide.Contains(_user.Role) ? (Guid?)null : _user.SiteId, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 }

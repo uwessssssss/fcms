@@ -19,7 +19,7 @@ interface Tank {
   fillPct: number;
   status: 'normal' | 'low' | 'critical' | 'replenishing';
   drawRateLPH: number;
-  hoursToEmpty: number;
+  hoursToEmpty: number | null;
   lastDelivery: string;
   nextDelivery: string | null;
 }
@@ -50,7 +50,7 @@ function toTank(r: TankInventoryRow): Tank {
     fillPct: r.fillPct,
     status: r.status as Tank['status'],
     drawRateLPH: r.drawRateLph ?? 0,
-    hoursToEmpty: r.hoursToEmpty ?? 0,
+    hoursToEmpty: r.hoursToEmpty && r.hoursToEmpty > 0 ? r.hoursToEmpty : null,   // nothing drawing: no time to empty
     lastDelivery: r.lastDelivery ? r.lastDelivery.slice(0, 10) : '—',
     // No delivery scheduling exists in this system yet, so this is null rather
     // than a date invented to fill the column.
@@ -161,9 +161,9 @@ export default function TankInventoryContent() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Stock', value: `${(totalLitres / 1000).toFixed(0)}k L`, sub: `of ${(totalCapacity / 1000).toFixed(0)}k L capacity`, icon: 'BeakerIcon', color: 'var(--primary)' },
-          { label: 'Critical Tanks', value: String(criticalCount), sub: 'Delivery required today', icon: 'ExclamationTriangleIcon', color: 'var(--status-fault)' },
-          { label: 'Low Stock', value: String(lowCount), sub: 'Delivery within 48h', icon: 'ExclamationCircleIcon', color: 'var(--accent)' },
-          { label: isSiteManager ? 'Your Site' : 'Sites Monitored', value: isSiteManager ? '1' : '5', sub: isSiteManager ? (assignedSite ?? 'Assigned site') : 'All sites reporting', icon: 'MapPinIcon', color: 'var(--primary)' },
+          { label: 'Critical Tanks', value: String(criticalCount), sub: criticalCount ? 'Order a delivery today' : 'None below the critical level', icon: 'ExclamationTriangleIcon', color: 'var(--status-fault)' },
+          { label: 'Low Stock', value: String(lowCount), sub: lowCount ? 'Order within 48 hours' : 'None running low', icon: 'ExclamationCircleIcon', color: 'var(--accent)' },
+          { label: isSiteManager ? 'Your Site' : 'Sites Monitored', value: isSiteManager ? '1' : String(new Set(scopedTanks.map((t) => t.site).filter(Boolean)).size), sub: isSiteManager ? (assignedSite ?? 'Assigned site') : 'Stations and depots with tanks', icon: 'MapPinIcon', color: 'var(--primary)' },
         ].map((card) => (
           <div
             key={card.label}
@@ -276,7 +276,7 @@ export default function TankInventoryContent() {
               </div>
               <div>
                 <p style={{ color: 'var(--muted-foreground)' }}>Est. empty</p>
-                <p className="font-semibold text-foreground font-mono-nums">{tank.hoursToEmpty}h</p>
+                <p className="font-semibold text-foreground font-mono-nums">{tank.hoursToEmpty == null ? '—' : `${tank.hoursToEmpty.toFixed(1)}h`}</p>
               </div>
               <div>
                 <p style={{ color: 'var(--muted-foreground)' }}>Last delivery</p>

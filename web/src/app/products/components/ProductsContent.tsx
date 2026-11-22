@@ -45,7 +45,7 @@ function toProduct(r: ProductRow): Product {
     sku: r.code,
     category: 'Fuel',
     unit: 'litre',
-    costPrice: 0,
+    costPrice: r.costPrice ?? 0,
     sellingPrice: r.pumpPrice ?? 0,
     stockQty: Math.round(r.stockLitres),
     // These were missing (hidden by a cast): every product showed Inactive,

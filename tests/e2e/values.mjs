@@ -191,6 +191,55 @@ await settle();
     Array.isArray(pts) ? `${pts.length} shifts on ${day}, ${offPts.length} off` : `status ${pts.status}`);
 }
 
+// ---- The screens head office reads (sixth pass) -------------------------------
+{
+  // Overview: the real day, the real number of sites, no typed-in trends.
+  await open('/');
+  const o = seen.get('/api/v1/dashboard/overview');
+  const t = await text();
+  check('display', 'Overview', 'says how many sites there are', o && t.includes(`${o.sites.length} location${o.sites.length === 1 ? '' : 's'}`), o ? `${o.sites.length}` : 'no overview');
+  check('display', 'Overview', 'no made-up date or trend', !/15 September 2026|\+8\.4% vs yesterday|-4% vs this time yesterday|\+3\.1% vs yesterday/.test(t));
+
+  // Management pack: the bottom line is the company's, as the site table is.
+  await open('/management-reports');
+  const pack = seen.get('/api/reports/directors');
+  if (pack) {
+    // The site table is pump and depot sales; the pack adds the shop.
+    const siteRevenue = sum(pack.sites || [], (x) => x.revenue);
+    const shop = Number(sql(`SELECT COALESCE(SUM(dsl.line_amount), 0) FROM dry_sale ds JOIN dry_sale_line dsl ON dsl.sale_id = ds.id
+                              JOIN shift s ON s.id = ds.shift_id WHERE s.business_date BETWEEN '${String(pack.from).slice(0, 10)}' AND '${String(pack.to).slice(0, 10)}'`));
+    check('logic', 'Management pack', 'revenue = every site\'s pump and depot sales + shop sales', near(pack.revenue, siteRevenue + shop, 1), `${pack.revenue} vs ${siteRevenue} + ${shop}`);
+  } else check('logic', 'Management pack', 'received', false);
+
+  // Losses: negative is fuel missing -- the screen says it that way round.
+  await open('/losses');
+  const daily = seen.get('/api/reports/loss/daily') || [];
+  const total = sum(daily, (r) => r.lossLitres);
+  const lt = await text();
+  const words = total <= -0.05 ? 'Fuel the books expect that the dips did not find' : total >= 0.05 ? 'More fuel than the books expect' : 'The tanks agree with the books';
+  check('display', 'Losses', 'says loss or gain the database\'s way round', lt.includes(words), `${total.toFixed(2)} L: "${words}"`);
+  const dbTotal = Number(sql(`SELECT COALESCE(SUM(loss_litres), 0) FROM v_daily_stock_loss
+                               WHERE business_date BETWEEN date_trunc('month', (now() AT TIME ZONE 'Africa/Kampala'))::date AND (now() AT TIME ZONE 'Africa/Kampala')::date`));
+  check('truth', 'Losses', 'the period\'s total is every site\'s', near(total, dbTotal, 0.01), `${total} vs ${dbTotal}`);
+
+  // Products: the price and cost the books hold, not UGX 0.
+  await open('/products');
+  const prods = seen.get('/api/v1/products') || [];
+  const badPrice = prods.filter((p) => !near(p.pumpPrice ?? 0, Number(sql(`SELECT COALESCE((SELECT new_price FROM price_change WHERE product_id = '${p.id}' AND status = 'EXECUTED' ORDER BY effective_from DESC LIMIT 1), 0)`))));
+  check('truth', 'Products', 'pump price = the last price executed', prods.length > 0 && badPrice.length === 0, badPrice.map((p) => p.code).join(' '));
+  check('logic', 'Products', 'every fuel in stock has a cost', prods.every((p) => !(p.stockLitres > 0) || (p.costPrice ?? 0) > 0), prods.map((p) => `${p.code} ${p.costPrice}`).join(', '));
+
+  // Pump setup: every nozzle shows its tank.
+  await open('/pump-setup');
+  check('display', 'Pump setup', 'no nozzle says "No tank linked"', !(await text()).includes('No tank linked'));
+
+  // Tank inventory: the sites it counts are the sites it shows.
+  await open('/inventory/tanks');
+  const tanks = seen.get('/api/v1/inventory/tanks') || [];
+  const nSites = new Set(tanks.map((x) => x.site).filter(Boolean)).size;
+  check('display', 'Tank inventory', 'counts the sites it shows', (await text()).includes(`${nSites}\n`) || (await text()).includes(`${nSites} `), `${nSites}`);
+}
+
 // ---- Books ---------------------------------------------------------------------
 {
   await open('/books');

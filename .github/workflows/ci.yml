@@ -194,11 +194,12 @@ jobs:
           # the same screens at phone width, for two roles (reviewed, not gated)
           OUT=out-phone VIEWPORT=390x844 USERS=HO01,SUP01 node e2e.mjs > out-phone.log 2>&1 || true
           node values.mjs; values=$?
-          # last: it closes a shift and appoints people in the demo
+          # these close shifts and appoint people in the demo: after the rest
+          node closeflow.mjs; closescreen=$?
           node flow.mjs;   flow=$?
           # the shift it closed, recomputed from its readings with the rest
           psql -d fcms -X -q -v ON_ERROR_STOP=1 -f ../../tools/audit/shift_math.sql | grep "SHIFT MATH"; audit=${PIPESTATUS[0]}
-          exit $(( screens || values || flow || audit ))
+          exit $(( screens || values || closescreen || flow || audit ))
 
       - name: Publish the screenshots for review (demo data only)
         if: always() && github.event_name == 'push'
@@ -211,7 +212,7 @@ jobs:
           cp -r out-phone/shots /tmp/review/phone 2>/dev/null || true
           cp out/report.json /tmp/review/desktop.json 2>/dev/null || true
           cp out-phone/report.json /tmp/review/phone.json 2>/dev/null || true
-          cp out/REPORT.md out/VALUES.md /tmp/review/ 2>/dev/null || true
+          cp out/REPORT.md out/VALUES.md out/CLOSEFLOW.json out/FLOW.json /tmp/review/ 2>/dev/null || true
           cd /tmp/review
           git init -q -b audit-shots && git add -A
           git -c user.name=ci -c user.email=ci@localhost commit -qm "screens at ${GITHUB_SHA::7}"

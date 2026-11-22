@@ -60,7 +60,7 @@ function toAppUser(r: StaffRow): AppUser {
             : role === 'ATTENDANT'
               ? 'attendant'
               : 'shift_supervisor',
-    site: '',
+    site: r.siteName,
     status: !r.isActive
       ? 'inactive'
       : r.lockedUntil

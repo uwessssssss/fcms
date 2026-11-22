@@ -76,7 +76,13 @@ public sealed class DryStockService
         { "DAMAGE_OUT", "EXPIRY_OUT", "OWN_USE_OUT", "CUSTOMER_RETURN_IN",
           "TRANSFER_IN", "TRANSFER_OUT" };
 
-    public async Task<IReadOnlyList<DryItemView>> ItemsAsync(string? category,
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
+    /// <summary>Shop and lubricant items, with one site's stock and price. A
+    /// station sees its own; head office names the site (it holds no stock, so
+    /// its own site read 0 of everything with no prices).</summary>
+    public async Task<IReadOnlyList<DryItemView>> ItemsAsync(string? category, Guid? siteId,
                                                              CancellationToken ct)
     {
         var conn = await _uow.ConnectionAsync(ct);
@@ -100,7 +106,7 @@ public sealed class DryStockService
                AND (@category::text IS NULL OR i.category = @category)
              ORDER BY i.category, i.name
             """,
-            new { site = _user.SiteId, category },
+            new { site = CompanyWide.Contains(_user.Role) && siteId is Guid g ? g : _user.SiteId, category },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
     }
 
@@ -385,8 +391,8 @@ public static class DryStockEndpoints
     {
         var g = app.MapGroup("/api/dry-stock").RequireAuthorization();
 
-        g.MapGet("/items", async (string? category, DryStockService s, CancellationToken ct) =>
-            Results.Ok(await s.ItemsAsync(category, ct)));
+        g.MapGet("/items", async (string? category, Guid? siteId, DryStockService s, CancellationToken ct) =>
+            Results.Ok(await s.ItemsAsync(category, siteId, ct)));
 
         g.MapPost("/shifts/{shiftId:guid}/sales",
             async (Guid shiftId, RecordDrySale req, DryStockService s, CancellationToken ct) =>

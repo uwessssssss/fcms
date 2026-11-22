@@ -154,7 +154,8 @@ public sealed class StatementService
             + "still owed. A shortage nobody chased is a wage subsidy.",
             "People",
             """
-            SELECT sh.business_date   AS "date",
+            SELECT (SELECT name FROM site WHERE id = sh.site_id) AS "site",
+                   sh.business_date   AS "date",
                    -- Carried but not shown: a recovery must name the shortage
                    -- and the person, and a statement without them left the
                    -- recovery screen with nothing to recover against.
@@ -169,7 +170,17 @@ public sealed class StatementService
                    CASE WHEN ss.approved_by IS NULL THEN 'Waiting'
                         WHEN ss.amount - COALESCE(rec.recovered, 0) <= 0 THEN 'Settled'
                         ELSE 'Owing' END AS "status",
-                   ss.reason          AS "reason"
+                   ss.reason          AS "reason",
+                   -- The cash the cash-up expected and what was handed in (with
+                   -- drops): the shortage is the gap. The screen showed the
+                   -- shortage as "expected" and 0 as "actual".
+                   COALESCE((SELECT -SUM(mm.amount) FROM money_movement mm
+                              WHERE mm.cash_up_id = c.id AND mm.settlement = 'CASH'), 0) + ss.amount AS "expected",
+                   COALESCE((SELECT -SUM(mm.amount) FROM money_movement mm
+                              WHERE mm.cash_up_id = c.id AND mm.settlement = 'CASH'), 0) AS "handed_in",
+                   (SELECT string_agg(DISTINCT n.code, ', ') FROM nozzle_assignment na
+                      JOIN nozzle n ON n.id = na.nozzle_id
+                     WHERE na.shift_id = c.shift_id AND na.attendant_id = ss.staff_id) AS "nozzles"
               FROM staff_shortage ss
               JOIN cash_up c ON c.id = ss.cash_up_id
               JOIN shift sh  ON sh.id = c.shift_id
@@ -342,11 +353,19 @@ public sealed class StatementService
                    dl.loaded_litres   AS "on_note",
                    dl.received_litres AS "received",
                    dl.transit_variance AS "variance",
-                   d.status           AS "status"
+                   d.status           AS "status",
+                   -- the dips that prove the load, its cost, its driver
+                   db.product_litres  AS "dip_before",
+                   da.product_litres  AS "dip_after",
+                   dl.unit_cost       AS "cost_per_litre",
+                   round(COALESCE(dl.received_litres, 0) * COALESCE(dl.unit_cost, 0), 2) AS "cost",
+                   d.driver_name      AS "driver"
               FROM delivery d
               JOIN delivery_line dl ON dl.delivery_id = d.id
               JOIN tank t   ON t.id = dl.tank_id
               LEFT JOIN supplier sup ON sup.id = d.supplier_id
+              LEFT JOIN dip_reading db ON db.id = dl.dip_before_id
+              LEFT JOIN dip_reading da ON da.id = dl.dip_after_id
              WHERE (@site::uuid IS NULL OR d.site_id = @site)
                AND COALESCE(d.decant_ended_at, d.arrived_at)::date BETWEEN @from AND @to
              ORDER BY COALESCE(d.decant_ended_at, d.arrived_at) DESC
@@ -354,8 +373,10 @@ public sealed class StatementService
             [C("date", "Date", "date"), C("note", "Note", "figure"), C("supplier", "Supplier"),
              C("truck", "Truck", "figure"), C("tank", "Tank"),
              C("on_note", "On note", "litres"), C("received", "Received", "litres"),
-             C("variance", "Variance", "litres"), C("status", "Status", "pill")],
-            ["on_note", "received", "variance"]),
+             C("variance", "Variance", "litres"), C("status", "Status", "pill"),
+             C("dip_before", "Dip before", "litres"), C("dip_after", "Dip after", "litres"),
+             C("cost_per_litre", "Cost / L", "money"), C("cost", "Cost", "money"), C("driver", "Driver")],
+            ["on_note", "received", "variance", "cost"]),
 
         ["own-use"] = new(
             "Own use",

@@ -1,7 +1,9 @@
 'use client';
 import { api, ApiError } from '@/lib/api';
 import type { DryItemView } from '@/types/api';
-import { useSites } from '@/lib/useSites';
+import { useSites, useSiteOptions } from '@/lib/useSites';
+import { isCompanyWide } from '@/lib/roles';
+import { getWorkingSite } from '@/lib/workingSite';
 import { FormProblem } from '@/components/ui/Issues';
 import React, { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
@@ -46,7 +48,9 @@ const SUPPLIERS = ['Total Energies', 'Castrol', 'Shell Helix', 'Mobil', 'Caltex'
 function toStockItem(r: DryItemView): StockItem {
   return {
     id: r.itemId,
-    name: r.isCylinder && r.cylinderState ? `${r.name} (${r.cylinderState.toLowerCase()})` : r.name,
+    // The state is appended once: names that already say it read "(empty) (empty)".
+    name: r.isCylinder && r.cylinderState && !r.name.toLowerCase().includes(`(${r.cylinderState.toLowerCase()})`)
+      ? `${r.name} (${r.cylinderState.toLowerCase()})` : r.name,
     category: r.category,
     unit: r.sellUnit,
     costPrice: 0,
@@ -80,6 +84,13 @@ export default function OtherStocksContent() {
   // Was useState(INIT_STOCK): the initial value is read once, at mount, while
   // the load had not returned -- so the list stayed empty until an edit.
   const [stock, setStock] = useState<StockItem[]>([]);
+
+  // Head office holds no stock: it sees the working site chosen in the top
+  // bar (lib/workingSite). It read its own site: 0 of everything, no prices.
+  const { user } = useAuth();
+  const companyWide = isCompanyWide(user?.role);
+  const siteOptions = useSiteOptions();
+  const viewSite = getWorkingSite() ?? '';
 
   useEffect(() => {
     let cancelled = false;
@@ -327,7 +338,7 @@ export default function OtherStocksContent() {
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
             {isSiteManager && assignedSite
               ? `Lubricants & non-fuel inventory — ${assignedSite}`
-              : 'Lubricants, oils, and non-fuel inventory across all sites'}
+              : `Lubricants & non-fuel inventory — ${siteOptions.find((x) => x.id === viewSite)?.name ?? (companyWide ? 'the working site in the top bar' : 'this site')}`}
           </p>
         </div>
         <button onClick={openAdd} className="btn-primary">

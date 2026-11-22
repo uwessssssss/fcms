@@ -69,6 +69,9 @@ public record ProfitStatement(
 /// </summary>
 public sealed class AccountsService
 {
+    private static readonly HashSet<string> CompanyWide =
+        new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
 
@@ -260,6 +263,10 @@ public sealed class AccountsService
     {
         Require("report.view");
         var conn = await _uow.ConnectionAsync(ct);
+        // Head office, auditors, the administrator: the whole company. It read
+        // the user's own site -- for head office, the head office -- so the
+        // management pack showed UGX 0 revenue above a table of 255 million.
+        Guid? site = CompanyWide.Contains(_user.Role) ? null : _user.SiteId;
 
         var fuel = await conn.QuerySingleAsync<FuelPeriod>(new CommandDefinition(
             """
@@ -270,8 +277,17 @@ public sealed class AccountsService
                 JOIN metered_disposition md
                   ON md.meter_event_id = me.id AND md.kind = 'SALE'
                 JOIN shift s ON s.id = me.shift_id
-               WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to
+               WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to
                GROUP BY me.tank_id, s.business_date
+            ),
+            -- Depot loads to trade customers, at the cost each was loaded at.
+            -- The statement counted only pump and shop sales, so a company
+            -- with a depot reported its revenue short by every load.
+            depot_sold AS (
+              SELECT bs.amount, bs.litres, bs.unit_cost
+                FROM bulk_sale bs
+               WHERE (@site::uuid IS NULL OR bs.site_id = @site)
+                 AND fn_business_date(bs.site_id, bs.loaded_at) BETWEEN @from AND @to
             )
             -- Each tank-day at its moving average as that day ended (380), the
             -- same basis as the depot-against-station report. This costed the
@@ -279,14 +295,17 @@ public sealed class AccountsService
             -- what last month's sales cost.
             -- Litres with NO cost basis are counted apart, not costed at 0 --
             -- costing them at nothing reported their whole price as margin.
-            SELECT COALESCE(SUM(revenue), 0)                          AS Revenue,
-                   COALESCE(SUM(litres * c.avg), 0)                   AS Cost,
-                   COALESCE(SUM(litres) FILTER (WHERE c.avg IS NULL), 0) AS UncostedLitres
+            SELECT COALESCE(SUM(revenue), 0)
+                     + COALESCE((SELECT SUM(bs.amount) FROM depot_sold bs), 0)     AS Revenue,
+                   COALESCE(SUM(litres * c.avg), 0)
+                     + COALESCE((SELECT SUM(bs.litres * bs.unit_cost) FROM depot_sold bs), 0) AS Cost,
+                   COALESCE(SUM(litres) FILTER (WHERE c.avg IS NULL), 0)
+                     + COALESCE((SELECT SUM(bs.litres) FROM depot_sold bs WHERE bs.unit_cost IS NULL), 0) AS UncostedLitres
               FROM sold
               CROSS JOIN LATERAL (SELECT fn_weighted_avg_cost(tank_id,
                                     (business_date + 1)::timestamptz) AS avg) c
             """,
-            new { site = _user.SiteId, from, to },
+            new { site, from, to },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         var shop = await conn.QuerySingleAsync<ShopPeriod>(new CommandDefinition(
@@ -297,17 +316,17 @@ public sealed class AccountsService
             -- re-costed last month, and one station priced another's sales.
             SELECT COALESCE(SUM(revenue), 0) AS Revenue,
                    COALESCE(SUM(qty * COALESCE(
-                     fn_dry_avg_cost(item_id, @site, (business_date + 1)::timestamptz), 0)), 0) AS Cost
+                     fn_dry_avg_cost(item_id, site_id, (business_date + 1)::timestamptz), 0)), 0) AS Cost
               FROM (
-                SELECT dsl.item_id, s.business_date,
+                SELECT dsl.item_id, s.site_id, s.business_date,
                        SUM(dsl.qty) AS qty, SUM(dsl.line_amount) AS revenue
                   FROM dry_sale ds
                   JOIN dry_sale_line dsl ON dsl.sale_id = ds.id
                   JOIN shift s ON s.id = ds.shift_id
-                 WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to
-                 GROUP BY dsl.item_id, s.business_date) d
+                 WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to
+                 GROUP BY dsl.item_id, s.site_id, s.business_date) d
             """,
-            new { site = _user.SiteId, from, to },
+            new { site, from, to },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         // Fuel the business burned itself: the generator, the pickup, the
@@ -324,10 +343,10 @@ public sealed class AccountsService
                 SELECT ou.tank_id, s.business_date, SUM(ou.litres) AS litres
                   FROM own_use ou
                   JOIN shift s ON s.id = ou.shift_id
-                 WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to
+                 WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to
                  GROUP BY ou.tank_id, s.business_date) d
             """,
-            new { site = _user.SiteId, from, to },
+            new { site, from, to },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         var breakdown = (await conn.QueryAsync<CategoryTotal>(new CommandDefinition(
@@ -335,20 +354,20 @@ public sealed class AccountsService
             SELECT category AS Category, SUM(amount) AS Amount,
                    COALESCE(SUM(from_till), 0) AS FromTill, SUM(entries)::int AS Entries
               FROM v_daily_expense
-             WHERE site_id = @site AND business_date BETWEEN @from AND @to
+             WHERE (@site::uuid IS NULL OR site_id = @site) AND business_date BETWEEN @from AND @to
              GROUP BY category ORDER BY SUM(amount) DESC
             """,
-            new { site = _user.SiteId, from, to },
+            new { site, from, to },
             transaction: _uow.Transaction, cancellationToken: ct))).ToList();
 
         var other = await conn.QuerySingleAsync<OtherPeriod>(new CommandDefinition(
             """
             SELECT
               (SELECT COALESCE(SUM(loss_value), 0) FROM v_daily_stock_loss
-                WHERE site_id = @site AND business_date BETWEEN @from AND @to) AS StockLossValue,
+                WHERE (@site::uuid IS NULL OR site_id = @site) AND business_date BETWEEN @from AND @to) AS StockLossValue,
               (SELECT COALESCE(SUM(ss.amount), 0) FROM staff_shortage ss
                  JOIN shift s ON s.id = ss.shift_id
-                WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to)
+                WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to)
                                                                        AS ShortagesRaised,
               -- THIS station's recoveries, and only money actually got back.
               -- It had no site filter -- every station's statement counted the
@@ -356,19 +375,19 @@ public sealed class AccountsService
               -- given up on, as recovered: net overstated by every write-off.
               (SELECT COALESCE(SUM(sr.amount), 0) FROM shortage_recovery sr
                  JOIN staff st ON st.id = sr.staff_id
-                WHERE st.site_id = @site
+                WHERE (@site::uuid IS NULL OR st.site_id = @site)
                   AND sr.method <> 'WRITE_OFF'
                   AND fn_business_date(st.site_id, sr.recovered_at) BETWEEN @from AND @to)
                                                                        AS ShortagesRecovered,
               (SELECT COALESCE(SUM(dg.amount), 0) FROM discount_grant dg
                  JOIN shift s ON s.id = dg.shift_id
-                WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to)
+                WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to)
               -- (600) Credit billed at an agreed price: below the pump it is
               -- revenue given up, like a discount; a credit premium above the
               -- pump is revenue earned, and reduces this figure.
             + (SELECT COALESCE(SUM(round(cs.litres * cs.pump_price, 2) - cs.amount), 0) FROM credit_sale cs
                  JOIN shift s ON s.id = cs.shift_id
-                WHERE s.site_id = @site AND s.business_date BETWEEN @from AND @to
+                WHERE (@site::uuid IS NULL OR s.site_id = @site) AND s.business_date BETWEEN @from AND @to
                   AND cs.customer_price_id IS NOT NULL)
                                                                        AS DiscountsGiven,
               -- Fuel PAID FOR and never received. The supplier bills the
@@ -381,11 +400,11 @@ public sealed class AccountsService
                  FROM delivery_line dl
                  JOIN delivery d ON d.id = dl.delivery_id
                  JOIN shift s    ON s.id = d.decant_shift_id
-                WHERE d.site_id = @site AND d.status = 'RECEIVED'
+                WHERE (@site::uuid IS NULL OR d.site_id = @site) AND d.status = 'RECEIVED'
                   AND dl.received_litres IS NOT NULL
                   AND s.business_date BETWEEN @from AND @to)       AS TransitLossValue
             """,
-            new { site = _user.SiteId, from, to },
+            new { site, from, to },
             transaction: _uow.Transaction, cancellationToken: ct));
 
         var expenses = breakdown.Sum(b => b.Amount);

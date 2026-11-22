@@ -10,6 +10,8 @@ import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import CashDropsPanel from '@/components/CashDropsPanel';
 import { api, ApiError } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { isCompanyWide } from '@/lib/roles';
 import type {
   AssignmentView,
   CreditSaleView,
@@ -69,6 +71,8 @@ export default function ShiftOperationsContent() {
   const [busy, setBusy] = useState(false);
 
   // ---- opening ----
+  const { user } = useAuth();
+  const companyWide = isCompanyWide(user?.role);
   const [label, setLabel] = useState('DAY');
   const [openDips, setOpenDips] = useState<Record<string, string>>({});
   const [openTried, setOpenTried] = useState(false);
@@ -363,12 +367,24 @@ export default function ShiftOperationsContent() {
         <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
           {shift
             ? `${shift.label} shift open since ${new Date(shift.openedAt).toLocaleTimeString()}, opened by ${shift.openedByName}`
-            : 'No shift is open. Everything below waits on one.'}
+            : companyWide ? 'Head office' : 'No shift is open. Everything below waits on one.'}
         </p>
       </div>
 
+      {/* Head office runs no shifts: it has no tanks or pumps (240). The form
+          below only ever said "this site has no tanks". */}
+      {!shift && companyWide && (
+        <div className="rounded-xl border p-4 space-y-1" style={card}>
+          <h2 className="text-sm font-semibold text-foreground">Shifts run at the stations</h2>
+          <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+            A station&apos;s supervisor opens and closes its shifts. Head office sees them on Site Operations
+            and Shift Reports, and approves the ones waiting below.
+          </p>
+        </div>
+      )}
+
       {/* ── OPEN A SHIFT ── */}
-      {!shift && (
+      {!shift && !companyWide && (
         <div className="rounded-xl border p-4 space-y-4" style={card}>
           <h2 className="text-sm font-semibold text-foreground">Open a shift</h2>
 

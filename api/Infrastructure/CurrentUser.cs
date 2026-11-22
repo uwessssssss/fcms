@@ -13,6 +13,7 @@ public interface ICurrentUser
     Guid TenantId { get; }
     Guid StaffId { get; }
     Guid SiteId { get; }
+    Guid HomeSiteId { get; }
     Guid SessionId { get; }
     string Role { get; }
     string FullName { get; }
@@ -22,13 +23,26 @@ public interface ICurrentUser
 public sealed class CurrentUser : ICurrentUser
 {
     private readonly ClaimsPrincipal? _principal;
+    private readonly HttpContext? _http;
 
-    public CurrentUser(IHttpContextAccessor accessor) => _principal = accessor.HttpContext?.User;
+    public CurrentUser(IHttpContextAccessor accessor)
+        => (_principal, _http) = (accessor.HttpContext?.User, accessor.HttpContext);
+
+    /// <summary>The key under which SessionCheckMiddleware leaves head office's working site.</summary>
+    public const string WorkingSiteKey = "fcms.working_site";
 
     public bool IsAuthenticated => _principal?.Identity?.IsAuthenticated == true;
     public Guid TenantId  => Guid.TryParse(Claim("tenant_id"),  out var g) ? g : Guid.Empty;
     public Guid StaffId   => Guid.TryParse(Claim("staff_id"),   out var g) ? g : Guid.Empty;
-    public Guid SiteId    => Guid.TryParse(Claim("site_id"),    out var g) ? g : Guid.Empty;
+    /// <summary>The site this request acts on. A station's people: their own.
+    /// Head office, auditors and the system administrator hold no stock and
+    /// run no shifts at their own site, so station screens read nothing there:
+    /// for them it is the WORKING site they chose in the top bar (X-Site-Id),
+    /// checked against the company by SessionCheckMiddleware.</summary>
+    public Guid SiteId    => _http?.Items[WorkingSiteKey] is Guid w ? w
+                           : Guid.TryParse(Claim("site_id"), out var g) ? g : Guid.Empty;
+    /// <summary>The site on the sign-in itself, whatever is being viewed.</summary>
+    public Guid HomeSiteId => Guid.TryParse(Claim("site_id"), out var g) ? g : Guid.Empty;
     public Guid SessionId => Guid.TryParse(Claim("session_id"), out var g) ? g : Guid.Empty;
     public string FullName => Claim("name") ?? "";
 

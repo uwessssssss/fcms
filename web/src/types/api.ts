@@ -154,6 +154,8 @@ export interface CustomerView {
   /** The oldest unsettled invoice. Null when nothing is owed. */
   oldestInvoice: string | null;
   isActive: boolean;
+  /** The site that opened the account. */
+  siteName: string;
 }
 
 // --- people -----------------------------------------------------------------
@@ -180,6 +182,8 @@ export interface StaffRow {
   lastLoginAt: string | null;
   lockedUntil: string | null;
   activeSessions: number;
+  /** Where they work. */
+  siteName: string;
 }
 
 // --- alerts -----------------------------------------------------------------
@@ -285,6 +289,8 @@ export interface EquipmentRow {
    * those readings lose their subject.
    */
   inUse: boolean;
+  /** A nozzle's tank; null for tanks and pumps. */
+  tankId: string | null;
 }
 
 // --- site operations --------------------------------------------------------
@@ -347,6 +353,8 @@ export interface ProductRow {
   name: string;
   /** The last EXECUTED price at this site. Null if none has ever been set. */
   pumpPrice: number | null;
+  /** The books' average cost of a litre in stock, weighted by stock. */
+  costPrice: number | null;
   stockLitres: number;
   tankCount: number;
   isActive: boolean;
@@ -574,6 +582,8 @@ export interface DailyLossRow {
   lossLitres: number;
   lossPct: number | null;
   lossValue: number;
+  /** Head office sees every site's tanks: whose this is. */
+  siteName: string;
 }
 
 export interface DivergenceRow {
@@ -985,6 +995,8 @@ export interface PolicyRow {
   attendantCashCap: number | null;   // nullable on save: left out, the setting stays
   /** A stock variance this small is dipstick noise and is not raised (590). */
   dipNoiseLitres: number | null;
+  /** The most the two meters' litres may differ at a close (730). */
+  meterPairToleranceLitres: number | null;
   maxShortageCarry: number;
   requireSecondApproverAbove: number;
   breakShiftOnPriceChange: boolean;

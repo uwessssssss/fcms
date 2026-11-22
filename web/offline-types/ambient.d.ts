@@ -262,6 +262,7 @@ declare module "recharts" {
   export const Cell: any;
   export const ResponsiveContainer: any;
   export const Tooltip: any;
+  export const Legend: any;
   export const XAxis: any;
   export const YAxis: any;
 }

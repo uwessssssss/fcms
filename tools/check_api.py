@@ -148,6 +148,8 @@ for m in re.finditer(r"CREATE\s+(?:OR REPLACE\s+)?VIEW\s+(\w+)", schema_sql_nc, 
 for p, s in sources.items():
     for lit in re.findall(r'"""(.*?)"""', s, re.S):
         # CTEs and aliases are defined inside the query itself, not the schema.
+        # Comments first: one between ", " and a CTE's name hid the name.
+        lit = re.sub(r"--[^\n]*", "", lit)
         local = {m.group(1).lower() for m in
                  re.finditer(r"(?:WITH|,)\s+(\w+)\s+AS\s*\(", lit, re.I)}
         local |= {m.group(1).lower() for m in

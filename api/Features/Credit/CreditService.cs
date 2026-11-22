@@ -32,6 +32,8 @@ public sealed class CustomerView
     public decimal Headroom { get; set; }
     public DateTime? OldestInvoice { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>The site that opened the account.</summary>
+    public string SiteName { get; set; } = "";
 }
 
 /// <summary>Dapper target: class with settable properties. See docs/DAPPER.md.</summary>
@@ -202,7 +204,8 @@ public sealed class CreditService
                    c.credit_limit AS CreditLimit, c.payment_terms_days AS PaymentTermsDays,
                    COALESCE(a.balance, 0)  AS Balance,
                    COALESCE(a.headroom, c.credit_limit) AS Headroom,
-                   a.oldest_invoice AS OldestInvoice, c.is_active AS IsActive
+                   a.oldest_invoice AS OldestInvoice, c.is_active AS IsActive,
+                   COALESCE((SELECT name FROM site WHERE id = c.site_id), '') AS SiteName
               FROM credit_customer c
               LEFT JOIN v_credit_ageing a ON a.customer_id = c.id
              WHERE (@activeOnly = false OR c.is_active)

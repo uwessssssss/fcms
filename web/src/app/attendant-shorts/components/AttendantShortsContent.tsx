@@ -48,12 +48,11 @@ function toShort(r: Record<string, unknown>): Short {
     shift: shiftLabelName(field(r, 'shift')),
     attendantName: field(r, 'attendant'),
     badge: field(r, 'employee_no'),
-    nozzle: '',
-    // Expected and actual are not on this statement: it reports the SHORTAGE,
-    // which is their difference. Deriving a pair from one figure would invent
-    // two numbers that never existed.
-    expectedAmount: num(r, 'raised'),
-    actualAmount: 0,
+    nozzle: field(r, 'nozzles'),
+    // The cash the cash-up expected, and what was handed in (drops included);
+    // the shortage is the difference. These read the shortage and 0.
+    expectedAmount: num(r, 'expected'),
+    actualAmount: num(r, 'handed_in'),
     shortAmount: num(r, 'raised'),
     // 'resolved', which is what the badges know. This returned 'recovered' --
     // not a status this screen has -- and a cast hid it from the compiler, so

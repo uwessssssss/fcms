@@ -3,7 +3,7 @@ import { ApiError, api } from '@/lib/api';
 import type { EquipmentRow, ProductRow, TankInventoryRow, UpsertNozzle, UpsertPump, UpsertTank } from '@/types/api';
 import PartialLoadNotice from '@/components/ui/PartialLoadNotice';
 import { FormProblem } from '@/components/ui/Issues';
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { useToast } from '@/components/ui/Toast';
 
@@ -87,7 +87,7 @@ function toPumps(rows: EquipmentRow[]): Pump[] {
             nozzleNo: Number(n.code.replace(/\D/g, '')) || j + 1,
             grade,
             gradeColor: GRADE_COLOUR[grade] ?? '#64748B',
-            tankId: n.detail ?? '',
+            tankId: n.tankId ?? '',
           };
         }),
     }));
@@ -134,6 +134,7 @@ export default function PumpSetupContent() {
       .then((rows) => {
         if (!cancelled) {
           setPumps(toPumps(rows));
+          setSiteTankIds(new Set(rows.filter((r) => r.kind === 'TANK').map((r) => r.id)));
           setLoadError(null);
         }
       })
@@ -149,7 +150,10 @@ export default function PumpSetupContent() {
   }, []);
 
   const [pumps, setPumps] = useState<Pump[]>([]);
-  const [tanks, setTanks] = useState<Tank[]>([]);
+  const [allTanks, setTanks] = useState<Tank[]>([]);
+  // This site's tanks only: the tank list is the company's, the pumps one site's.
+  const [siteTankIds, setSiteTankIds] = useState<Set<string>>(new Set());
+  const tanks = useMemo(() => (siteTankIds.size ? allTanks.filter((t) => siteTankIds.has(t.id)) : allTanks), [allTanks, siteTankIds]);
   const [activeTab, setActiveTab] = useState<'pumps' | 'tanks'>('pumps');
   const { showToast } = useToast();
 

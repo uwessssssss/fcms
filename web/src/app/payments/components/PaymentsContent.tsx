@@ -104,6 +104,9 @@ const statusConfig = {
   failed: { label: 'Failed', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
 } as const;
 
+// Whole shillings, or two places -- never one ("9,824,123.9").
+const ugx = (n: number) => n.toLocaleString('en-UG', Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function PaymentsContent() {
   const [partial, setPartial] = useState<string[]>([]);
   // A form's problem stays beside its save button until fixed (FormProblem).
@@ -249,13 +252,13 @@ export default function PaymentsContent() {
                 the positive days only, which counted cash already banked on a
                 later day as still sitting in the station. */}
             <p className="text-sm font-semibold text-foreground">
-              Cash in the station: UGX {cashPos[0].runningOnHand.toLocaleString()} not yet banked
+              Cash in the station: UGX {ugx(cashPos[0].runningOnHand)} not yet banked
             </p>
             <div className="mt-2 space-y-1">
               {cashPos.map((c) => (
                 <p key={c.businessDate} className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                  {c.businessDate} · collected {c.cashCollected.toLocaleString()} · banked {c.cashBanked.toLocaleString()}
-                  {' '}· <span style={{ color: c.runningOnHand > 0 ? '#F59E0B' : 'var(--foreground)' }}>{c.runningOnHand.toLocaleString()} held at day end</span>
+                  {c.businessDate.slice(0, 10)} · collected {ugx(c.cashCollected)} · banked {ugx(c.cashBanked)}
+                  {' '}· <span style={{ color: c.runningOnHand > 0 ? '#F59E0B' : 'var(--foreground)' }}>{ugx(c.runningOnHand)} held at day end</span>
                 </p>
               ))}
             </div>
@@ -295,7 +298,7 @@ export default function PaymentsContent() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Mobile Money & Visa Payments</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
-            MTN, Airtel, M-Pesa, Tigo, HaloPesa, Visa/Mastercard transactions
+            Mobile money and card takings, as each attendant declared them at the shift close
           </p>
         </div>
         {/* This opened an eight-field form whose Save then refused: tenders are
@@ -306,11 +309,10 @@ export default function PaymentsContent() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Mobile Money Total', value: `UGX ${fmt(mmTotal)}`, icon: 'DevicePhoneMobileIcon', color: '#f59e0b' },
           { label: 'Visa/Card Total', value: `UGX ${fmt(visaTotal)}`, icon: 'CreditCardIcon', color: '#3b82f6' },
-          { label: 'Total Litres', value: `${fmt(totalLitres)} L`, icon: 'BeakerIcon', color: 'var(--primary)' },
           { label: 'Transactions', value: String(filtered.length), icon: 'ClipboardDocumentListIcon', color: '#22c55e' },
         ].map((c) => (
           <div key={c.label} className="rounded-xl p-4 border" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>

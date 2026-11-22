@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 import { api } from '@/lib/api';
 import type { RevenuePoint } from '@/types/api';
@@ -16,15 +16,15 @@ import type { RevenuePoint } from '@/types/api';
  */
 const PALETTE = ['#00D4A0', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#14B8A6'];
 
-export default function RevenueAreaChart() {
+export default function RevenueAreaChart({ days = 7 }: { days?: number }) {
   const [rows, setRows] = useState<RevenuePoint[] | null>(null);
 
   useEffect(() => {
     void api
-      .get<RevenuePoint[]>('/api/v1/analytics/revenue?days=7')
+      .get<RevenuePoint[]>(`/api/v1/analytics/revenue?days=${days}`)
       .then(setRows)
       .catch(() => setRows([]));
-  }, []);
+  }, [days]);
 
   // One row per day, one key per site -- recharts wants the wide shape.
   const { data, sites } = useMemo(() => {
@@ -46,7 +46,7 @@ export default function RevenueAreaChart() {
   if (rows.length === 0) {
     return (
       <div className="h-[220px] flex items-center justify-center text-xs text-center px-6" style={{ color: 'var(--muted-foreground)' }}>
-        No closed shifts in the last seven days, so there is no revenue to chart yet.
+        No closed shifts in the last {days} days, so there is no revenue to chart yet.
       </div>
     );
   }
@@ -75,6 +75,10 @@ export default function RevenueAreaChart() {
           formatter={(v: number, name: string) => [`UGX ${v.toLocaleString()}`, name]}
           contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', fontSize: 12 }}
         />
+        {/* Its own legend, from the same series as the lines: the dashboard's
+            legend took its colours from a different list of sites, so a line
+            could wear another site's colour. */}
+        <Legend wrapperStyle={{ fontSize: 11, color: 'var(--muted-foreground)' }} iconType="circle" iconSize={8} />
         {sites.map((s, i) => (
           <Area
             key={`area-${i}`}

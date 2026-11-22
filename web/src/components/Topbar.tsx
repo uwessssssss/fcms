@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import { useVisibleNav } from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
+import { isCompanyWide } from '@/lib/roles';
+import { useSiteOptions } from '@/lib/useSites';
+import { getWorkingSite, setWorkingSite } from '@/lib/workingSite';
 import { businessToday } from '@/lib/dates';
 import { useOpenAlerts } from '@/lib/useOpenAlerts';
 
@@ -19,7 +22,15 @@ import { useOpenAlerts } from '@/lib/useOpenAlerts';
  */
 export default function Topbar({ onMenu }: { onMenu?: () => void } = {}) {
   const router = useRouter();
-  const { isSiteManager, assignedSite } = useAuth();
+  const { isSiteManager, assignedSite, user } = useAuth();
+  const companyWide = isCompanyWide(user?.role);
+  const siteOptions = useSiteOptions();
+  // The server's default when none is chosen: the first station by name.
+  const defaultSite = useMemo(() => {
+    const byName = [...siteOptions].sort((a, b) => a.name.localeCompare(b.name));
+    return (byName.find((x) => x.kind === 'STATION') ?? byName[0])?.id ?? '';
+  }, [siteOptions]);
+  const workingSite = getWorkingSite() ?? defaultSite;
   const visible = useVisibleNav();
   const openAlerts = useOpenAlerts();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -145,17 +156,35 @@ export default function Topbar({ onMenu }: { onMenu?: () => void } = {}) {
         )}
       </button>
 
-      {/* Whose sites */}
-      <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl"
-           style={{
-             background: isSiteManager ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.03)',
-             border: isSiteManager ? '1px solid rgba(96,165,250,0.15)' : '1px solid rgba(255,255,255,0.07)',
-           }}>
-        <Icon name="MapPinIcon" size={13} style={{ color: isSiteManager ? 'rgb(96,165,250)' : 'var(--primary)' }} />
-        <span className="text-sm font-medium" style={{ color: isSiteManager ? 'rgb(96,165,250)' : 'var(--foreground)' }}>
-          {isSiteManager && assignedSite ? assignedSite : 'All Sites'}
-        </span>
-      </div>
+      {/* Whose sites. Station staff: their own. Head office: the working site
+          its station screens act on (lib/workingSite) -- this was a label
+          reading "All Sites" that chose nothing, so those screens read the
+          head office's own site, which holds nothing. */}
+      {companyWide && siteOptions.length > 0 ? (
+        <label className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl"
+               title="The station or depot that pump, stock, loss and price screens show"
+               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <Icon name="MapPinIcon" size={13} style={{ color: 'var(--primary)' }} />
+          <select aria-label="Working site" className="bg-transparent text-sm font-medium text-foreground outline-none"
+                  value={workingSite}
+                  onChange={(e) => { setWorkingSite(e.target.value); window.location.reload(); }}>
+            {siteOptions.map((x) => (
+              <option key={x.id} value={x.id} style={{ background: 'var(--card)' }}>{x.name}{x.kind === 'DEPOT' ? ' (depot)' : ''}</option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl"
+             style={{
+               background: isSiteManager ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.03)',
+               border: isSiteManager ? '1px solid rgba(96,165,250,0.15)' : '1px solid rgba(255,255,255,0.07)',
+             }}>
+          <Icon name="MapPinIcon" size={13} style={{ color: isSiteManager ? 'rgb(96,165,250)' : 'var(--primary)' }} />
+          <span className="text-sm font-medium" style={{ color: isSiteManager ? 'rgb(96,165,250)' : 'var(--foreground)' }}>
+            {isSiteManager && assignedSite ? assignedSite : 'All Sites'}
+          </span>
+        </div>
+      )}
 
       {/* The business day: 06:00 to 06:00, so 02:00 belongs to yesterday */}
       <div className="hidden xl:flex items-center gap-2 px-3.5 py-2 rounded-xl"

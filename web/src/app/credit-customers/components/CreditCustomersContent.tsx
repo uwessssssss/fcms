@@ -65,7 +65,7 @@ function toCreditCustomer(r: CustomerView): CreditCustomer {
       : r.headroom < 0
         ? 'overdue'
         : 'active',
-    site: '',
+    site: r.siteName,
   };
 }
 
@@ -100,7 +100,8 @@ const emptyTx: Omit<CreditTransaction, 'id' | 'customerId'> = {
   description: '', litres: 0, amount: 0, type: 'purchase', shift: 'Day',
 };
 
-function fmt(n: number) { return n.toLocaleString('en-UG'); }
+// Whole shillings, or two places -- never one ("164,993,729.1").
+function fmt(n: number) { return n.toLocaleString('en-UG', Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 const statusConfig = {
   active: { label: 'Active', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
@@ -464,7 +465,7 @@ export default function CreditCustomersContent() {
                       <td className="px-4 py-3 font-mono-nums text-xs text-foreground">UGX {fmt(c.creditLimit)}</td>
                       <td className="px-4 py-3">
                         <div>
-                          <span className="font-mono-nums text-xs font-semibold" style={{ color: utilisation > 90 ? '#ef4444' : utilisation > 70 ? '#f59e0b' : '#22c55e' }}>UGX {fmt(c.balance)}</span>
+                          <span className="font-mono-nums text-xs font-semibold" style={{ color: utilisation > 90 ? '#ef4444' : utilisation > 70 ? '#f59e0b' : '#22c55e' }}>{c.balance < 0 ? `UGX ${fmt(-c.balance)} paid ahead` : `UGX ${fmt(c.balance)}`}</span>
                           <div className="w-20 h-1.5 rounded-full mt-1" style={{ backgroundColor: 'var(--muted)' }}>
                             <div className="h-full rounded-full" style={{ width: `${Math.min(utilisation, 100)}%`, backgroundColor: utilisation > 90 ? '#ef4444' : utilisation > 70 ? '#f59e0b' : '#22c55e' }} />
                           </div>

@@ -87,32 +87,6 @@ function fmtGbp(n: number) {
   return 'UGX ' + fmt(n);
 }
 
-function GradePill({ label, pct, color }: { label: string; pct: number; color: string }) {
-  return (
-    <div className="flex items-center gap-1.5 min-w-0">
-      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-      <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{label}</span>
-      <span className="text-xs font-mono-nums font-medium" style={{ color: 'var(--foreground)' }}>{pct}%</span>
-    </div>
-  );
-}
-
-function UptimeBar({ pct }: { pct: number }) {
-  const color = pct === 100 ? 'var(--status-active)' : pct >= 80 ? 'var(--status-fault)' : 'var(--status-offline)';
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: 'var(--muted)' }}>
-        <div
-          className="h-1.5 rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: color }}
-        />
-      </div>
-      <span className="text-xs font-mono-nums font-semibold w-10 text-right" style={{ color }}>
-        {pct}%
-      </span>
-    </div>
-  );
-}
 
 export default function ReportsContent() {
   const [dailyData, setDailyData] = useState<SiteReport[]>([]);
@@ -162,14 +136,12 @@ export default function ReportsContent() {
     setExporting(true);
     setTimeout(() => {
       const headers = [
-        'Site', 'Location', 'Status', 'Revenue (UGX)', 'Target (UGX)', 'vs Target (%)',
-        'Transactions', 'Avg Transaction (UGX)', 'Litres Dispensed', 'Pump Uptime (%)',
+        'Site', 'Location', 'Status', 'Revenue (UGX)', 'Target (UGX)', 'vs Target (%)', 'Litres Dispensed',
       ];
       const rows = filtered.map((s) => [
         s.name, s.location, s.status,
-        s.revenue.toFixed(2), s.revenueTarget.toFixed(2), s.revenueVsTarget.toFixed(1),
-        s.transactions, s.avgTransaction.toFixed(2), s.litresDispensed,
-        s.pumpUptime,
+        s.revenue.toFixed(2), s.revenueTarget > 0 ? s.revenueTarget.toFixed(2) : '', s.revenueTarget > 0 ? s.revenueVsTarget.toFixed(1) : '',
+        s.litresDispensed,
       ]);
       const label = period === 'daily' ? 'daily' : 'weekly';
       const dateStr = localDate();   // a file is named by the calendar
@@ -271,7 +243,7 @@ export default function ReportsContent() {
             className="input-field pl-8 pr-8 py-2 text-sm appearance-none cursor-pointer"
             style={{ minWidth: 180 }}
           >
-            <option value="all">All Sites (5)</option>
+            <option value="all">All Sites ({dailyData.length})</option>
             {dailyData.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -290,12 +262,12 @@ export default function ReportsContent() {
       </div>
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Transactions and pump uptime are not measured -- they need a pump
+          controller this system does not have -- so they are not shown as 0. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
           { label: 'Total Revenue', value: fmtGbp(totals.revenue), icon: 'BanknotesIcon', color: 'var(--primary)' },
-          { label: 'Transactions', value: fmt(totals.transactions), icon: 'CreditCardIcon', color: 'var(--secondary-foreground)' },
           { label: 'Litres Dispensed', value: fmt(totals.litres) + ' L', icon: 'BeakerIcon', color: 'var(--accent)' },
-          { label: 'Avg Pump Uptime', value: totals.avgUptime.toFixed(1) + '%', icon: 'BoltIcon', color: totals.avgUptime >= 90 ? 'var(--status-active)' : 'var(--status-fault)' },
         ].map((m) => (
           <div key={m.label} className="card p-4 flex items-center gap-3">
             <div
@@ -331,8 +303,7 @@ export default function ReportsContent() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {[
-                  'Site', 'Status', 'Revenue', 'vs Target', 'Transactions',
-                  'Avg Txn', 'Litres', 'Pump Uptime', 'Fuel Grade Mix',
+                  'Site', 'Status', 'Revenue', 'vs Target', 'Litres',
                 ].map((h) => (
                   <th
                     key={h}
@@ -371,14 +342,16 @@ export default function ReportsContent() {
                       <p className="font-semibold font-mono-nums" style={{ color: 'var(--foreground)' }}>
                         {fmtGbp(site.revenue)}
                       </p>
-                      <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                        of {fmtGbp(site.revenueTarget)}
-                      </p>
+                      {site.revenueTarget > 0 && (
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                          of {fmtGbp(site.revenueTarget)}
+                        </p>
+                      )}
                     </td>
 
-                    {/* vs Target */}
+                    {/* vs Target: only against a target that exists */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span
+                      {site.revenueTarget <= 0 ? <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>No target</span> : <span
                         className="inline-flex items-center gap-1 text-xs font-semibold font-mono-nums px-2 py-1 rounded-md"
                         style={{
                           backgroundColor: vsTargetPositive ? 'rgba(0,200,150,0.12)' : 'rgba(239,68,68,0.12)',
@@ -390,21 +363,7 @@ export default function ReportsContent() {
                           size={12}
                         />
                         {vsTargetPositive ? '+' : ''}{site.revenueVsTarget.toFixed(1)}%
-                      </span>
-                    </td>
-
-                    {/* Transactions */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <p className="font-mono-nums font-medium" style={{ color: 'var(--foreground)' }}>
-                        {fmt(site.transactions)}
-                      </p>
-                    </td>
-
-                    {/* Avg Txn */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <p className="font-mono-nums" style={{ color: 'var(--foreground)' }}>
-                        {fmtGbp(site.avgTransaction)}
-                      </p>
+                      </span>}
                     </td>
 
                     {/* Litres */}
@@ -414,36 +373,6 @@ export default function ReportsContent() {
                       </p>
                     </td>
 
-                    {/* Pump Uptime */}
-                    <td className="px-4 py-3.5" style={{ minWidth: 140 }}>
-                      <UptimeBar pct={site.pumpUptime} />
-                      <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                        {site.pumpsFault > 0
-                          ? `${site.pumpsFault} pump${site.pumpsFault > 1 ? 's' : ''} faulted`
-                          : 'All pumps operational'}
-                      </p>
-                    </td>
-
-                    {/* Fuel Grade Mix */}
-                    <td className="px-4 py-3.5" style={{ minWidth: 200 }}>
-                      {site.fuelGradeMix ? (<>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                        <GradePill label="UNL" pct={site.fuelGradeMix.unleaded} color="#00C896" />
-                        <GradePill label="SUP" pct={site.fuelGradeMix.superUnleaded} color="#3B82F6" />
-                        <GradePill label="DSL" pct={site.fuelGradeMix.diesel} color="#F59E0B" />
-                        <GradePill label="PRD" pct={site.fuelGradeMix.premiumDiesel} color="#8B5CF6" />
-                      </div>
-                      {/* Stacked bar */}
-                      <div className="flex h-1.5 rounded-full overflow-hidden mt-2 gap-px">
-                        <div style={{ width: `${site.fuelGradeMix.unleaded}%`, backgroundColor: '#00C896' }} />
-                        <div style={{ width: `${site.fuelGradeMix.superUnleaded}%`, backgroundColor: '#3B82F6' }} />
-                        <div style={{ width: `${site.fuelGradeMix.diesel}%`, backgroundColor: '#F59E0B' }} />
-                        <div style={{ width: `${site.fuelGradeMix.premiumDiesel}%`, backgroundColor: '#8B5CF6' }} />
-                      </div>
-                      </>) : (
-                        <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>— not reported</span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
@@ -463,22 +392,10 @@ export default function ReportsContent() {
                   </td>
                   <td className="px-4 py-3" />
                   <td className="px-4 py-3">
-                    <p className="font-mono-nums font-medium text-sm" style={{ color: 'var(--foreground)' }}>
-                      {fmt(totals.transactions)}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3" />
-                  <td className="px-4 py-3">
                     <p className="font-mono-nums text-sm" style={{ color: 'var(--foreground)' }}>
                       {fmt(totals.litres)} L
                     </p>
                   </td>
-                  <td className="px-4 py-3">
-                    <p className="font-mono-nums font-semibold text-sm" style={{ color: totals.avgUptime >= 90 ? 'var(--status-active)' : 'var(--status-fault)' }}>
-                      {totals.avgUptime.toFixed(1)}% avg
-                    </p>
-                  </td>
-                  <td className="px-4 py-3" />
                 </tr>
               </tfoot>
             )}

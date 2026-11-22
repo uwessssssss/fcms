@@ -35,7 +35,7 @@ const POLICY_FIELDS: Field[] = [
   ['shiftVarianceLitres', 'Most litres a shift may lose (L)', 'Beyond this it is an exception, whatever the percentage: on a busy day a large loss hides inside a small one.'],
   ['monthlyVariancePct', 'Monthly loss tolerance (%)', 'A grade losing more than this share of what it sold is shown in red on the reports.'],
   ['maxShortageCarry', 'Most an attendant may owe (UGX)', 'Putting someone who owes more on a nozzle raises a warning. It does not stop them working.'],
-  ['meterDivergencePct', 'Meter heads may disagree by (%)', 'Mechanical against electronic on the same nozzle.'],
+  ['meterPairToleranceLitres', 'Meters may disagree by (L)', 'Electronic against manual litres on each nozzle at a close. Beyond this the close needs a reason and goes to the manager flagged.'],
   ['pumpTestTolerancePct', 'Pump test tolerance (%)', 'A test can outside this means the pump needs calibrating.'],
   ['transitLossPct', 'Allowed transit loss (%)', 'Between the depot note and the dips at the station.'],
   ['waterAlarmMm', 'Water alarm (mm)', 'Water above this in a tank raises a critical exception.'],
@@ -88,7 +88,7 @@ export default function AdministrationContent() {
     if (neg.length) c.error('policy', `These cannot be negative: ${neg.join(', ')}`);
     const pct = (v: number, what: string) => { if (v > 2) c.warn('policy', `${what} is ${v}% - did you mean ${v / 100}%? A wide tolerance hides losses`); };
     pct(policy.shiftVariancePct, 'Shift variance tolerance'); pct(policy.monthlyVariancePct, 'Monthly loss tolerance');
-    pct(policy.transitLossPct, 'Transit loss allowed'); pct(policy.meterDivergencePct, 'Meter divergence allowed');
+    pct(policy.transitLossPct, 'Transit loss allowed'); 
     if (policy.shiftVarianceLitres > 500) c.warn('policy', `A shift could lose ${policy.shiftVarianceLitres.toLocaleString()} L before it is an exception`);
     if (policy.shiftVarianceLitres === 0) c.warn('policy', 'A litres cap of 0 makes every shift an exception');
     if (policy.maxShortageCarry > 2000000) c.warn('policy', `An attendant could owe UGX ${policy.maxShortageCarry.toLocaleString()} before a warning`);

@@ -1,3 +1,4 @@
+import { getWorkingSite } from "./workingSite";
 /**
  * The one place this application talks to the server.
  *
@@ -134,6 +135,9 @@ async function request<T>(
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Head office's working site (lib/workingSite). Ignored for station staff.
+  const site = getWorkingSite();
+  if (token && site) headers["X-Site-Id"] = site;
   const key = opts.idempotencyKey ?? (opts.submission ? submissionKey(opts.submission) : undefined);
   if (key) headers["Idempotency-Key"] = key;
 

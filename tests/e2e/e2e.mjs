@@ -241,6 +241,17 @@ async function visit(page, log, user, route, tab) {
     return out;
   }).catch(() => []);
   const shot = `shots/${safe(user)}__${safe(route)}${tab ? '__' + safe(tab) : ''}.png`;
+  // The app scrolls inside its own panels, so a "full page" shot stopped at
+  // the fold. Unclip every scrolling panel first, so the shot is the whole screen.
+  await page.evaluate(() => {
+    for (const el of [document.documentElement, document.body, ...document.querySelectorAll('*')]) {
+      const cs = getComputedStyle(el);
+      if (/(auto|scroll|hidden)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 4 && !el.closest('table')) {
+        el.style.overflow = 'visible'; el.style.height = 'auto'; el.style.maxHeight = 'none';
+      }
+    }
+    document.documentElement.style.height = 'auto'; document.body.style.height = 'auto';
+  }).catch(() => {});
   await page.screenshot({ path: path.join(OUT, shot), fullPage: true }).catch(() => {});
   pages.push({ user, route, tab: tab || '', ok: issues.length === 0, issues, forbidden, display, shot });
   console.log(`${issues.length ? 'ISSUE' : 'ok   '} ${user} ${route}${tab ? ' > ' + tab : ''}${issues.length ? ' :: ' + issues.slice(0, 2).join(' | ') : ''}${forbidden.length ? ' [refused: ' + [...new Set(forbidden)].join(', ') + ']' : ''}${display.length ? ' {display: ' + display.join(' | ') + '}' : ''}`);

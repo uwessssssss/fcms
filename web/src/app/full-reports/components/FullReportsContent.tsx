@@ -42,7 +42,7 @@ interface DailySummary {
 function toDailySummary(r: Record<string, unknown>): DailySummary {
   return {
     date: field(r, 'date'),
-    site: field(r, 'site'),
+    site: field(r, 'site') || 'All sites',   // the statement adds every site's day together
     totalSales: num(r, 'total_sales'),
     cashSales: num(r, 'cash'),
     mobileMoney: num(r, 'mobile_money'),
@@ -186,13 +186,16 @@ export default function FullReportsContent() {
         grade,
         // Derived, not invented: what must have been there for the period's
         // movements and the final dip to agree.
-        openingStock: closingStock + sold - received + loss,
+        // closing = opening + received - sold + variance, the variance being the
+        // server's signed figure (positive a gain, negative fuel missing).
+        openingStock: closingStock - received + sold - loss,
         received,
         sold,
         closingStock,
-        // Litres, positive for a gain -- the sign the export column states.
-        gainLoss: -loss,
-        gainLossValue: -lossValue,
+        // Litres, positive for a gain: the server's sign as it comes. This
+        // negated it, so fuel missing showed as a gain.
+        gainLoss: loss,
+        gainLossValue: lossValue,
         price: loss !== 0 ? Math.abs(lossValue / loss) : 0,
       };
     });
@@ -470,12 +473,17 @@ export default function FullReportsContent() {
               <table className="table-premium">
                 <thead>
                   <tr>
-                    {['Date', 'Site', 'Total Sales', 'Cash', 'Mobile Money', 'Visa', 'Credit', 'Discounts', 'Expenses', 'Litres', 'Gain/Loss', 'Short'].map(h => (
+                    {['Date', 'Site', 'Total Sales', 'Cash', 'Mobile Money', 'Card', 'Credit', 'Discounts', 'Expenses', 'Litres', 'Gain/Loss', 'Short'].map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
+                  {filteredDaily.length === 0 && (
+                    <tr><td colSpan={12} className="text-xs text-center py-6" style={{ color: 'var(--muted-foreground)' }}>
+                      No closed shifts in this period. A depot&apos;s loads are on the Depot screen.
+                    </td></tr>
+                  )}
                   {filteredDaily.map((d) => (
                     <tr key={`${d.date}-${d.site}`}>
                       <td className="text-xs font-mono-nums whitespace-nowrap" style={{ color: 'var(--muted-foreground)' }}>{d.date}</td>
@@ -485,8 +493,8 @@ export default function FullReportsContent() {
                       <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>{fmtUGX(d.mobileMoney)}</td>
                       <td className="font-mono-nums text-xs" style={{ color: '#60A5FA' }}>{fmtUGX(d.visa)}</td>
                       <td className="font-mono-nums text-xs" style={{ color: '#A78BFA' }}>{fmtUGX(d.credit)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>-{fmtUGX(d.discounts)}</td>
-                      <td className="font-mono-nums text-xs" style={{ color: '#F43F5E' }}>-{fmtUGX(d.expenses)}</td>
+                      <td className="font-mono-nums text-xs" style={{ color: '#F59E0B' }}>{d.discounts ? `-${fmtUGX(d.discounts)}` : '—'}</td>
+                      <td className="font-mono-nums text-xs" style={{ color: '#F43F5E' }}>{d.expenses ? `-${fmtUGX(d.expenses)}` : '—'}</td>
                       <td className="font-mono-nums text-xs text-foreground">{fmt(d.litresSold)} L</td>
                       <td><GainLossBadge value={d.gainLoss} /></td>
                       <td>
@@ -505,8 +513,8 @@ export default function FullReportsContent() {
                     <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>{fmtUGX(totals.mobileMoney)}</td>
                     <td className="font-mono-nums text-xs font-bold" style={{ color: '#60A5FA' }}>{fmtUGX(totals.visa)}</td>
                     <td className="font-mono-nums text-xs font-bold" style={{ color: '#A78BFA' }}>{fmtUGX(totals.credit)}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>-{fmtUGX(totals.discounts)}</td>
-                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>-{fmtUGX(totals.expenses)}</td>
+                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F59E0B' }}>{totals.discounts ? `-${fmtUGX(totals.discounts)}` : '—'}</td>
+                    <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>{totals.expenses ? `-${fmtUGX(totals.expenses)}` : '—'}</td>
                     <td className="font-mono-nums text-xs font-bold text-foreground">{fmt(totals.litresSold)} L</td>
                     <td><GainLossBadge value={totals.gainLoss} /></td>
                     <td className="font-mono-nums text-xs font-bold" style={{ color: '#F43F5E' }}>{totals.short > 0 ? `-${fmtUGX(totals.short)}` : '—'}</td>

@@ -197,11 +197,13 @@ export default function ManagementReportsContent() {
               ['Net position', `UGX ${fmt(pack.netPosition)}`, pack.netPosition < 0],
               ['Margin per litre', `UGX ${fmt(pack.marginPerLitre)}`, pack.marginPerLitre < 0],
               ['Litres sold', `${fmt(pack.totalLitres)} L`, false],
-              ['Stock loss', `${fmt(pack.stockLossLitres)} L${pack.stockLossPct !== null ? ` (${pack.stockLossPct.toFixed(2)}%)` : ''}`, pack.stockLossLitres > 0],
+              // negative is fuel missing (the server's sign): said in words, red when lost
+              [pack.stockLossLitres < 0 ? 'Stock lost' : 'Stock gained',
+               `${fmt(Math.abs(pack.stockLossLitres))} L${pack.stockLossPct !== null ? ` (${Math.abs(pack.stockLossPct).toFixed(2)}%)` : ''}`, pack.stockLossLitres < -0.5],
               ['Owed to us', `UGX ${fmt(pack.receivables)}`, false],
-              ['...past terms', `UGX ${fmt(pack.receivablesPastTerms)}`, pack.receivablesPastTerms > 0],
+              ['Owed to us, past terms', `UGX ${fmt(pack.receivablesPastTerms)}`, pack.receivablesPastTerms > 0],
               ['We owe', `UGX ${fmt(pack.payables)}`, false],
-              ['...overdue', `UGX ${fmt(pack.payablesOverdue)}`, pack.payablesOverdue > 0],
+              ['We owe, overdue', `UGX ${fmt(pack.payablesOverdue)}`, pack.payablesOverdue > 0],
               ['Cash on hand', `UGX ${fmt(pack.cashOnHand)}`, false],
               ['Working capital', `UGX ${fmt(pack.workingCapital)}`, pack.workingCapital < 0],
               ['Open exceptions', `${pack.openExceptions} (${pack.criticalExceptions} critical)`, pack.criticalExceptions > 0],
@@ -232,14 +234,14 @@ export default function ManagementReportsContent() {
       {!loading && !loadError && tab === 'loss' && (
         <>
           <Table head={['Grade', 'Sold', 'Lost', 'Value', 'Loss %', 'Tolerance', 'Days with a loss', 'Worst day']}
-                 rows={summary.map((s) => [s.productCode, fmt(s.totalSold), <span key="l" style={red(s.totalLoss > 0)}>{fmt(s.totalLoss)}</span>,
+                 rows={summary.map((s) => [s.productCode, fmt(s.totalSold), <span key="l" style={red(s.totalLoss < 0)}>{fmt(s.totalLoss)}</span>,
                    fmt(s.totalLossValue),
                    <span key="p" style={red(s.overTolerance)}>{s.lossPct === null ? '—' : `${s.lossPct.toFixed(2)}%`}</span>,
                    s.tolerancePct === null ? '—' : `${Number(s.tolerancePct).toFixed(2)}%`,
                    `${s.daysWithLoss} of ${s.daysMeasured}`, s.worstDate ? `${fmt(s.worstDayLitres)} L on ${s.worstDate}` : '—'])} />
           <Table head={['Date', 'Grade', 'Lost that day', 'Lost so far', 'Of all sold']}
                  rows={cumulative.map((c) => [c.businessDate, c.productCode, fmt(c.dayLossLitres),
-                   <span key="c" style={red(c.cumulativeLossLitres > 0)}>{fmt(c.cumulativeLossLitres)}</span>,
+                   <span key="c" style={red(c.cumulativeLossLitres < 0)}>{fmt(c.cumulativeLossLitres)}</span>,
                    c.cumulativeLossPct === null ? '—' : `${c.cumulativeLossPct.toFixed(2)}%`])} />
         </>
       )}

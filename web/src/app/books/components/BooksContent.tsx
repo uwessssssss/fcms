@@ -94,7 +94,7 @@ function Reconciliations() {
           <span className="text-xs font-semibold px-2 py-1 rounded-md"
                 style={{ background: differ ? 'rgba(239,68,68,0.12)' : 'rgba(0,212,160,0.12)',
                          color: differ ? '#ef4444' : 'var(--primary)' }}>
-            {differ ? `${differ} control${differ === 1 ? '' : 's'} differ — explain before closing the month` : 'Every control agrees'}
+            {differ ? `${differ} ${differ === 1 ? 'control differs' : 'controls differ'} — explain before closing the month` : 'Every control agrees'}
           </span>
         )}
       </div>

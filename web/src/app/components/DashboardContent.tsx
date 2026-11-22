@@ -129,6 +129,9 @@ export default function DashboardContent() {
   const [sites, setSites] = useState<Site[]>([]);
   const [loadingSites, setLoadingSites] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // The day and the comparisons the server worked out (they were typed-in text).
+  const [businessDate, setBusinessDate] = useState<string | null>(null);
+  const [vsYesterday, setVsYesterday] = useState<{ revenue: number | null; litres: number | null }>({ revenue: null, litres: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +151,8 @@ export default function DashboardContent() {
       .then((d) => {
         if (cancelled) return;
         setSites(d.sites.map(toSite));
+        setBusinessDate(d.businessDate?.slice(0, 10) ?? null);
+        setVsYesterday({ revenue: d.revenueVsYesterdayPct, litres: d.litresVsYesterdayPct });
         setLoadError(null);
       })
       .catch((e) => {
@@ -165,7 +170,8 @@ export default function DashboardContent() {
       cancelled = true;
     };
   }, []);
-  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
+  // The revenue chart's window. "Today" did nothing, and nor did the rest.
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>('week');
   const { showToast } = useToast();
   const { isSiteManager } = useAuth();
   const router = useRouter();
@@ -236,8 +242,7 @@ export default function DashboardContent() {
     showToast('Alert dismissed', 'info');
   };
 
-  const periods: { key: 'day' | 'week' | 'month'; label: string }[] = [
-    { key: 'day', label: 'Today' },
+  const periods: { key: 'week' | 'month'; label: string }[] = [
     { key: 'week', label: '7 Days' },
     { key: 'month', label: '30 Days' },
   ];
@@ -249,7 +254,8 @@ export default function DashboardContent() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">All Sites Overview</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-            5 locations · Tuesday 15 September 2026
+            {sites.length} location{sites.length === 1 ? '' : 's'}
+            {businessDate ? ` · ${new Date(businessDate + 'T00:00:00').toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -292,21 +298,20 @@ export default function DashboardContent() {
           label="Total Revenue Today"
           value={formatCurrency(totalRevenue)}
           subtext={totalTarget > 0 ? `Target: ${formatCurrency(totalTarget)} · ${Math.round((totalRevenue / totalTarget) * 100)}% achieved` : 'No revenue target set'}
-          trend={{ value: '+8.4% vs yesterday', direction: 'up', positive: true }}
+          trend={vsYesterday.revenue == null ? undefined : { value: `${vsYesterday.revenue >= 0 ? '+' : ''}${vsYesterday.revenue.toFixed(1)}% vs yesterday`, direction: vsYesterday.revenue >= 0 ? 'up' : 'down', positive: vsYesterday.revenue >= 0 }}
           icon="CurrencyPoundIcon"
         />
         <MetricCard
           label="Pump Availability"
           value={`${pumpPct}%`}
           subtext={`${activePumps} active of ${totalPumps} total across all sites`}
-          trend={{ value: '-4% vs this time yesterday', direction: 'down', positive: false }}
           icon="BoltIcon"
           warning={pumpPct < 80}
         />
         <MetricCard
           label="Critical Tank Alerts"
           value={String(criticalTanks)}
-          subtext={`${lowTanks} tanks below 30% · immediate delivery required`}
+          subtext={lowTanks === 0 ? 'Every site has its tanks above 30%' : `${lowTanks} site${lowTanks === 1 ? ' has a tank' : 's have tanks'} below 30%${criticalTanks ? ' · order now' : ''}`}
           icon="ExclamationTriangleIcon"
           alert={criticalTanks > 0}
         />
@@ -314,7 +319,7 @@ export default function DashboardContent() {
           label="Litres Dispensed Today"
           value={formatLitres(totalLitres)}
           subtext={(() => { const active = sites.filter(s => s.litresDispensed > 0).length; return active ? `Across all ${sites.length} sites · avg ${Math.round(totalLitres / active / 100) * 100}L per active site` : `Across all ${sites.length} sites · none has sold yet today`; })()}
-          trend={{ value: '+3.1% vs yesterday', direction: 'up', positive: true }}
+          trend={vsYesterday.litres == null ? undefined : { value: `${vsYesterday.litres >= 0 ? '+' : ''}${vsYesterday.litres.toFixed(1)}% vs yesterday`, direction: vsYesterday.litres >= 0 ? 'up' : 'down', positive: vsYesterday.litres >= 0 }}
           icon="BeakerIcon"
         />
       </div>
@@ -429,7 +434,7 @@ export default function DashboardContent() {
                     />
                   </div>
                   <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                    {Math.round(revenueProgress)}% of {formatCurrency(site.revenueTarget)} target
+                    {site.revenueTarget > 0 ? `${Math.round(revenueProgress)}% of ${formatCurrency(site.revenueTarget)} target` : 'No revenue target set'}
                   </p>
                 </div>
 
@@ -466,24 +471,13 @@ export default function DashboardContent() {
         <div className="xl:col-span-2 card p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Revenue by Site — Last 7 Days</h3>
+              <h3 className="text-sm font-semibold text-foreground">Revenue by Site — Last {selectedPeriod === 'month' ? 30 : 7} Days</h3>
               <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
                 Daily revenue (UGX) per site
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {sites.slice(0, 4).map((s, i) => {
-                const colors = ['var(--primary)', '#3B82F6', '#F59E0B', '#8B5CF6'];
-                return (
-                  <div key={`legend-${s.id}`} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i] }} />
-                    <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{s.name.split(' ')[0]}</span>
-                  </div>
-                );
-              })}
-            </div>
           </div>
-          <RevenueAreaChart />
+          <RevenueAreaChart days={selectedPeriod === 'month' ? 30 : 7} />
         </div>
 
         {/* Fuel grade bar */}

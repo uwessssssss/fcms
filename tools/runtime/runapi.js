@@ -37,7 +37,14 @@ global.fetch = async (url, init) => {
   if (outcome === 'reply-lost') throw new TypeError('reply lost');         // saved, but the client never hears
   return new Response(JSON.stringify(reply), { status: 200 });
 };
-const m = { exports: {} }; new Function('module', 'exports', 'require', 'process', js)(m, m.exports, require, { env: {} });
+// The client's own imports, compiled the same way (lib/workingSite since 2026-11).
+const local = (name) => {
+  const src2 = fs.readFileSync(path.join(REPO, 'web', 'src', 'lib', name.replace('./', '') + '.ts'), 'utf8');
+  const js2 = ts.transpileModule(src2, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+  const mod = { exports: {} }; new Function('module', 'exports', 'require', js2)(mod, mod.exports, require); return mod.exports;
+};
+const req = (n) => (n.startsWith('./') ? local(n) : require(n));
+const m = { exports: {} }; new Function('module', 'exports', 'require', 'process', js)(m, m.exports, req, { env: {} });
 const { api } = m.exports;
 
 let pass = 0, fail = 0;

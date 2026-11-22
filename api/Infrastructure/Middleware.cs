@@ -314,6 +314,9 @@ public sealed class IdempotencyHit
     /// </summary>
     public sealed class SessionCheckMiddleware
     {
+        private static readonly HashSet<string> WorkingSiteRoles =
+            new(StringComparer.OrdinalIgnoreCase) { "HEAD_OFFICE", "AUDITOR", "SYSTEM_ADMIN" };
+
         private readonly RequestDelegate _next;
         public SessionCheckMiddleware(RequestDelegate next) => _next = next;
 
@@ -341,6 +344,35 @@ public sealed class IdempotencyHit
                     "UPDATE staff_session SET last_seen_at = now() WHERE id = @id",
                     new { id = user.SessionId },
                     transaction: uow.Transaction, cancellationToken: ctx.RequestAborted));
+
+                // Head office's working site: the station or depot its station
+                // screens act on. Asked for in X-Site-Id; otherwise the first
+                // station. Only a company-wide role may choose, and only a
+                // trading site of its own company (RLS keeps the lookup in it).
+                if (WorkingSiteRoles.Contains(user.Role))
+                {
+                    Guid? asked = Guid.TryParse(ctx.Request.Headers["X-Site-Id"].ToString(), out var a) ? a : null;
+                    var site = await conn.ExecuteScalarAsync<Guid?>(new CommandDefinition(
+                        """
+                        SELECT id FROM site
+                         WHERE tenant_id = @tenant AND kind IN ('STATION', 'DEPOT')
+                           AND (@asked::uuid IS NULL OR id = @asked)
+                         ORDER BY (kind = 'STATION') DESC, name LIMIT 1   -- the same default as the top bar's
+                        """,
+                        new { tenant = user.TenantId, asked },
+                        transaction: uow.Transaction, cancellationToken: ctx.RequestAborted));
+                    if (asked is not null && site is null)
+                    {
+                        ctx.Response.StatusCode = 403;
+                        await ctx.Response.WriteAsJsonAsync(new
+                        {
+                            code = "SITE_NOT_YOURS",
+                            message = "That site is not a station or depot of this company."
+                        });
+                        return;
+                    }
+                    if (site is Guid s) ctx.Items[CurrentUser.WorkingSiteKey] = s;
+                }
             }
             await _next(ctx);
         }

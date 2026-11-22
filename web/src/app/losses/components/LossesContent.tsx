@@ -67,7 +67,10 @@ export default function LossesContent() {
   const totalValue = daily.reduce((t, r) => t + r.lossValue, 0);
 
   const card = { backgroundColor: 'var(--card)', borderColor: 'var(--border)' };
-  const lossColour = (l: number) => (Math.abs(l) < 0.5 ? 'var(--foreground)' : l > 0 ? '#ef4444' : '#F59E0B');
+  // The server's sign: NEGATIVE is fuel the dips did not find (v_daily_stock_loss,
+  // as the profit statement reads it). This screen read it the other way, so a
+  // real loss showed as a gain.
+  const lossColour = (l: number) => (Math.abs(l) < 0.5 ? 'var(--foreground)' : l < 0 ? '#ef4444' : '#F59E0B');
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
@@ -120,15 +123,16 @@ export default function LossesContent() {
               Over this period, book against dip
             </p>
             <p className="text-lg font-bold mt-1" style={{ color: lossColour(totalLoss) }}>
-              {totalLoss > 0 ? '' : '+'}{fmt(-totalLoss)} L
+              {/* a loss is shown negative, a gain positive, nothing as 0 (it read "+-0") */}
+              {Math.abs(totalLoss) < 0.05 ? '0' : totalLoss < 0 ? `-${fmt(-totalLoss)}` : `+${fmt(totalLoss)}`} L
               <span className="text-xs font-normal" style={{ color: 'var(--muted-foreground)' }}>
                 {' '}worth UGX {fmt(Math.abs(totalValue))}
               </span>
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-              {totalLoss > 0
+              {totalLoss <= -0.05
                 ? 'Fuel the books expect that the dips did not find.'
-                : totalLoss < 0
+                : totalLoss >= 0.05
                   ? 'More fuel than the books expect. Usually a delivery recorded short, a misread dip, or litres poured back without a return-to-tank.'
                   : 'The tanks agree with the books.'}
             </p>

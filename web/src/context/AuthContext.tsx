@@ -1,4 +1,5 @@
 'use client';
+import { setWorkingSite } from '@/lib/workingSite';
 import { api, ApiError, setToken, SESSION_ENDED_EVENT } from '@/lib/api';
 import { isCompanyWide } from '@/lib/roles';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -195,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * in on a machine they walked away from.
    */
   const logout = () => {
+    setWorkingSite(null);   // the next person chooses their own
     void api.post<unknown>('/api/auth/logout', {}).catch(() => undefined);
     setUser(null);
     setToken(null);

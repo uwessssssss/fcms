@@ -148,9 +148,11 @@ export default function LoginContent() {
           style={{ borderColor: 'var(--border)' }}
         >
           {[
-            { value: '5', label: 'Locations' },
-            { value: '44', label: 'Pumps' },
-            { value: '99.2%', label: 'Uptime SLA' },
+            // The system's rules, not made-up figures (these read "5 locations,
+            // 44 pumps, 99.2% uptime" -- nothing here can know that before sign-in).
+            { value: '2', label: 'Meters read on every nozzle' },
+            { value: '1 L', label: 'Most the two may differ' },
+            { value: 'UGX 0', label: 'Left unexplained at a close' },
           ].map((stat) => (
             <div key={`stat-${stat.label}`}>
               <p className="text-2xl font-bold font-mono-nums text-foreground">{stat.value}</p>
