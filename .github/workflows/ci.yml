@@ -122,6 +122,7 @@ jobs:
       PGHOST: localhost
       PGPORT: "5432"
       POSTGRES_USER: postgres
+      PGUSER: postgres
       DEMO_PASSWORD: "Demo-2026!"
     steps:
       - uses: actions/checkout@v4
