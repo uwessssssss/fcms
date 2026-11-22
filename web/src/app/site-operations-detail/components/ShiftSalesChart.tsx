@@ -2,6 +2,7 @@
 import { shiftLabelName } from '@/lib/shiftLabel';
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import type { TooltipProps } from 'recharts';
 
 import type { ShiftSalesPoint } from '@/types/api';
 
@@ -38,8 +39,9 @@ export default function ShiftSalesChart({ rows }: { rows: ShiftSalesPoint[] }) {
                  tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${Math.round(v / 1e3)}k` : String(v))} width={44} />
           <Tooltip
             cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-            content={({ active, payload }: { active?: boolean; payload?: Array<{ payload: (typeof data)[number] }> }) => {
-              const d = active ? payload?.[0]?.payload : undefined;
+            content={({ active, payload }: TooltipProps<number, string>) => {
+              // recharts types each entry's payload loosely; it is our row.
+              const d = active ? (payload?.[0]?.payload as (typeof data)[number] | undefined) : undefined;
               if (!d) return null;
               return (
                 <div className="card p-3 text-xs space-y-1" style={{ borderColor: 'var(--border)' }}>
